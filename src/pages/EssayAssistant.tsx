@@ -6,11 +6,13 @@ import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { useAuth } from '@/contexts/AuthContext';
+import { useProfile } from '@/hooks/useProfile';
 import Navbar from '@/components/Navbar';
 import { toast } from '@/hooks/use-toast';
 
 const EssayAssistant = () => {
   const { user } = useAuth();
+  const { profile } = useProfile();
   const [essayContent, setEssayContent] = useState('');
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [selectedPrompt, setSelectedPrompt] = useState('');
@@ -212,15 +214,15 @@ const EssayAssistant = () => {
                 <div className="space-y-2 text-sm">
                   <div className="flex justify-between">
                     <span>Major:</span>
-                    <span className="font-medium">{user?.profile?.intendedMajor}</span>
+                    <span className="font-medium">{profile?.intended_major || 'Not specified'}</span>
                   </div>
                   <div className="flex justify-between">
                     <span>GPA:</span>
-                    <span className="font-medium">{user?.profile?.gpa}</span>
+                    <span className="font-medium">{profile?.gpa || 'Not specified'}</span>
                   </div>
                   <div className="flex justify-between">
                     <span>SAT:</span>
-                    <span className="font-medium">{user?.profile?.satScore}</span>
+                    <span className="font-medium">{profile?.sat_score || 'Not specified'}</span>
                   </div>
                 </div>
                 <Button variant="outline" size="sm" className="w-full mt-3">

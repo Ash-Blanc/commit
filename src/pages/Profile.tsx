@@ -8,29 +8,74 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/contexts/AuthContext';
+import { useProfile } from '@/hooks/useProfile';
 import Navbar from '@/components/Navbar';
 import { toast } from '@/hooks/use-toast';
 
 const Profile = () => {
   const { user } = useAuth();
+  const { profile, loading, updateProfile } = useProfile();
   const [isEditing, setIsEditing] = useState(false);
   const [profileData, setProfileData] = useState({
-    name: user?.name || '',
-    email: user?.email || '',
-    gpa: user?.profile?.gpa || 0,
-    satScore: user?.profile?.satScore || 0,
-    actScore: user?.profile?.actScore || 0,
-    intendedMajor: user?.profile?.intendedMajor || '',
-    extracurriculars: user?.profile?.extracurriculars || [],
-    collegePreferences: user?.profile?.collegePreferences || []
+    first_name: '',
+    last_name: '',
+    email: '',
+    gpa: 0,
+    sat_score: 0,
+    act_score: 0,
+    intended_major: '',
+    high_school: '',
+    graduation_year: null as number | null,
+    extracurriculars: [] as string[],
+    collegePreferences: [] as string[]
   });
 
-  const handleSave = () => {
-    setIsEditing(false);
-    toast({
-      title: "Profile Updated",
-      description: "Your profile has been successfully updated.",
-    });
+  // Update local state when profile loads
+  useState(() => {
+    if (profile) {
+      setProfileData({
+        first_name: profile.first_name || '',
+        last_name: profile.last_name || '',
+        email: profile.email || user?.email || '',
+        gpa: profile.gpa || 0,
+        sat_score: profile.sat_score || 0,
+        act_score: profile.act_score || 0,
+        intended_major: profile.intended_major || '',
+        high_school: profile.high_school || '',
+        graduation_year: profile.graduation_year,
+        extracurriculars: [],
+        collegePreferences: []
+      });
+    }
+  });
+
+  const handleSave = async () => {
+    const updates = {
+      first_name: profileData.first_name,
+      last_name: profileData.last_name,
+      gpa: profileData.gpa,
+      sat_score: profileData.sat_score,
+      act_score: profileData.act_score,
+      intended_major: profileData.intended_major,
+      high_school: profileData.high_school,
+      graduation_year: profileData.graduation_year
+    };
+
+    const { error } = await updateProfile(updates);
+    
+    if (error) {
+      toast({
+        title: "Error",
+        description: "Failed to update profile",
+        variant: "destructive",
+      });
+    } else {
+      setIsEditing(false);
+      toast({
+        title: "Profile Updated",
+        description: "Your profile has been successfully updated.",
+      });
+    }
   };
 
   const addExtracurricular = () => {
@@ -53,6 +98,17 @@ const Profile = () => {
       extracurriculars: prev.extracurriculars.filter((_, i) => i !== index)
     }));
   };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Navbar />
+        <main className="container mx-auto px-4 py-8">
+          <div className="text-center">Loading profile...</div>
+        </main>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -82,24 +138,33 @@ const Profile = () => {
               <CardContent className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <Label htmlFor="name">Full Name</Label>
+                    <Label htmlFor="first_name">First Name</Label>
                     <Input
-                      id="name"
-                      value={profileData.name}
-                      onChange={(e) => setProfileData(prev => ({ ...prev, name: e.target.value }))}
+                      id="first_name"
+                      value={profileData.first_name}
+                      onChange={(e) => setProfileData(prev => ({ ...prev, first_name: e.target.value }))}
                       disabled={!isEditing}
                     />
                   </div>
                   <div>
-                    <Label htmlFor="email">Email</Label>
+                    <Label htmlFor="last_name">Last Name</Label>
                     <Input
-                      id="email"
-                      type="email"
-                      value={profileData.email}
-                      onChange={(e) => setProfileData(prev => ({ ...prev, email: e.target.value }))}
+                      id="last_name"
+                      value={profileData.last_name}
+                      onChange={(e) => setProfileData(prev => ({ ...prev, last_name: e.target.value }))}
                       disabled={!isEditing}
                     />
                   </div>
+                </div>
+                <div>
+                  <Label htmlFor="email">Email</Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    value={profileData.email}
+                    onChange={(e) => setProfileData(prev => ({ ...prev, email: e.target.value }))}
+                    disabled={!isEditing}
+                  />
                 </div>
               </CardContent>
             </Card>
@@ -118,7 +183,7 @@ const Profile = () => {
                       step="0.1"
                       max="4.0"
                       value={profileData.gpa}
-                      onChange={(e) => setProfileData(prev => ({ ...prev, gpa: parseFloat(e.target.value) }))}
+                      onChange={(e) => setProfileData(prev => ({ ...prev, gpa: parseFloat(e.target.value) || 0 }))}
                       disabled={!isEditing}
                     />
                   </div>
@@ -127,8 +192,8 @@ const Profile = () => {
                     <Input
                       id="sat"
                       type="number"
-                      value={profileData.satScore}
-                      onChange={(e) => setProfileData(prev => ({ ...prev, satScore: parseInt(e.target.value) }))}
+                      value={profileData.sat_score}
+                      onChange={(e) => setProfileData(prev => ({ ...prev, sat_score: parseInt(e.target.value) || 0 }))}
                       disabled={!isEditing}
                     />
                   </div>
@@ -137,8 +202,8 @@ const Profile = () => {
                     <Input
                       id="act"
                       type="number"
-                      value={profileData.actScore}
-                      onChange={(e) => setProfileData(prev => ({ ...prev, actScore: parseInt(e.target.value) }))}
+                      value={profileData.act_score}
+                      onChange={(e) => setProfileData(prev => ({ ...prev, act_score: parseInt(e.target.value) || 0 }))}
                       disabled={!isEditing}
                     />
                   </div>
@@ -147,8 +212,8 @@ const Profile = () => {
                 <div>
                   <Label htmlFor="major">Intended Major</Label>
                   <Select
-                    value={profileData.intendedMajor}
-                    onValueChange={(value) => setProfileData(prev => ({ ...prev, intendedMajor: value }))}
+                    value={profileData.intended_major}
+                    onValueChange={(value) => setProfileData(prev => ({ ...prev, intended_major: value }))}
                     disabled={!isEditing}
                   >
                     <SelectTrigger>
@@ -165,6 +230,27 @@ const Profile = () => {
                       <SelectItem value="History">History</SelectItem>
                     </SelectContent>
                   </Select>
+                </div>
+
+                <div>
+                  <Label htmlFor="high_school">High School</Label>
+                  <Input
+                    id="high_school"
+                    value={profileData.high_school}
+                    onChange={(e) => setProfileData(prev => ({ ...prev, high_school: e.target.value }))}
+                    disabled={!isEditing}
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="graduation_year">Graduation Year</Label>
+                  <Input
+                    id="graduation_year"
+                    type="number"
+                    value={profileData.graduation_year || ''}
+                    onChange={(e) => setProfileData(prev => ({ ...prev, graduation_year: parseInt(e.target.value) || null }))}
+                    disabled={!isEditing}
+                  />
                 </div>
               </CardContent>
             </Card>
