@@ -133,9 +133,9 @@ const CollegeSearch = () => {
                       <SelectValue placeholder="Select size" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="small">Small (< 5,000)</SelectItem>
+                      <SelectItem value="small">Small (&lt; 5,000)</SelectItem>
                       <SelectItem value="medium">Medium (5,000 - 15,000)</SelectItem>
-                      <SelectItem value="large">Large (> 15,000)</SelectItem>
+                      <SelectItem value="large">Large (&gt; 15,000)</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
