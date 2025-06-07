@@ -5,11 +5,15 @@ import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
+import { useProfile } from '@/hooks/useProfile';
+import { useApplications } from '@/hooks/useApplications';
 import Navbar from '@/components/Navbar';
 import { Link } from 'react-router-dom';
 
 const Dashboard = () => {
   const { user } = useAuth();
+  const { profile, loading: profileLoading } = useProfile();
+  const { applications, loading: applicationsLoading } = useApplications();
   const [currentTime, setCurrentTime] = useState(new Date());
 
   useEffect(() => {
@@ -17,32 +21,41 @@ const Dashboard = () => {
     return () => clearInterval(timer);
   }, []);
 
-  // Mock data for demo
-  const applications = [
-    { name: 'University of Florida', status: 'Auto-Submitted', progress: 100, deadline: '2024-01-15', timesSaved: 12 },
-    { name: 'Florida State University', status: 'Ready to Submit', progress: 95, deadline: '2024-01-20', timesSaved: 8 },
-    { name: 'University of Central Florida', status: 'In Progress', progress: 75, deadline: '2024-02-01', timesSaved: 6 },
-  ];
-
-  const essays = [
-    { title: 'Why UF? Essay', status: 'AI Optimized', score: 92, lastEdited: '1 day ago' },
-    { title: 'Personal Statement', status: 'Needs Review', score: 78, lastEdited: '3 days ago' },
-    { title: 'Leadership Experience', status: 'Complete', score: 95, lastEdited: '1 day ago' },
-  ];
-
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'Auto-Submitted': return 'bg-green-500';
-      case 'Ready to Submit': return 'bg-blue-500';
-      case 'In Progress': return 'bg-yellow-500';
-      case 'AI Optimized': return 'bg-green-500';
-      case 'Complete': return 'bg-green-500';
-      case 'Needs Review': return 'bg-orange-500';
+      case 'submitted': return 'bg-green-500';
+      case 'in_progress': return 'bg-blue-500';
+      case 'draft': return 'bg-yellow-500';
       default: return 'bg-gray-500';
     }
   };
 
-  const totalTimesSaved = applications.reduce((sum, app) => sum + app.timesSaved, 0);
+  const getStatusDisplay = (status: string) => {
+    switch (status) {
+      case 'submitted': return 'Auto-Submitted';
+      case 'in_progress': return 'Ready to Submit';
+      case 'draft': return 'In Progress';
+      default: return status;
+    }
+  };
+
+  const submittedApps = applications.filter(app => app.status === 'submitted').length;
+  const inProgressApps = applications.filter(app => app.status === 'in_progress').length;
+  const totalTimesSaved = applications.length * 8; // Estimate 8 hours saved per application
+
+  if (profileLoading || applicationsLoading) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Navbar />
+        <main className="container mx-auto px-4 py-8">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary mx-auto"></div>
+            <p className="mt-4 text-muted-foreground">Loading your dashboard...</p>
+          </div>
+        </main>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -50,10 +63,12 @@ const Dashboard = () => {
       
       <main className="container mx-auto px-4 py-8">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold mb-2">Welcome back, {user?.name}! 👋</h1>
+          <h1 className="text-3xl font-bold mb-2">
+            Welcome back, {profile?.first_name || user?.email?.split('@')[0]}! 👋
+          </h1>
           <p className="text-muted-foreground">
             You've saved <span className="font-semibold text-green-600">{totalTimesSaved} hours</span> with Commit's automation. 
-            <span className="font-semibold"> 3</span> applications ready, <span className="font-semibold">2</span> auto-submitted!
+            <span className="font-semibold"> {applications.length}</span> applications in progress, <span className="font-semibold">{submittedApps}</span> auto-submitted!
           </p>
         </div>
 
@@ -79,8 +94,8 @@ const Dashboard = () => {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-muted-foreground">Applications</p>
-                  <p className="text-2xl font-bold">3</p>
-                  <p className="text-xs text-muted-foreground">2 auto-submitted</p>
+                  <p className="text-2xl font-bold">{applications.length}</p>
+                  <p className="text-xs text-muted-foreground">{submittedApps} auto-submitted</p>
                 </div>
                 <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
                   <span className="text-blue-600">📋</span>
@@ -93,9 +108,9 @@ const Dashboard = () => {
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-muted-foreground">AI Essay Score</p>
-                  <p className="text-2xl font-bold">88</p>
-                  <p className="text-xs text-muted-foreground">+13 from last week</p>
+                  <p className="text-sm font-medium text-muted-foreground">Profile Strength</p>
+                  <p className="text-2xl font-bold">{profile?.gpa ? Math.round(profile.gpa * 25) : 75}</p>
+                  <p className="text-xs text-muted-foreground">GPA: {profile?.gpa || 'Not set'}</p>
                 </div>
                 <div className="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center">
                   <span className="text-purple-600">📈</span>
@@ -108,9 +123,9 @@ const Dashboard = () => {
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-muted-foreground">Next Deadline</p>
-                  <p className="text-2xl font-bold">Nov 30</p>
-                  <p className="text-xs text-muted-foreground">Auto-submit ready</p>
+                  <p className="text-sm font-medium text-muted-foreground">SAT Score</p>
+                  <p className="text-2xl font-bold">{profile?.sat_score || 'Not set'}</p>
+                  <p className="text-xs text-muted-foreground">Target: 1400+</p>
                 </div>
                 <div className="w-8 h-8 bg-orange-100 rounded-lg flex items-center justify-center">
                   <span className="text-orange-600">🎯</span>
@@ -126,62 +141,83 @@ const Dashboard = () => {
             <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle>Smart Application Tracker</CardTitle>
               <Button variant="outline" size="sm" asChild>
-                <Link to="/applications">Add College</Link>
+                <Link to="/college-search">Add College</Link>
               </Button>
             </CardHeader>
             <CardContent>
               <p className="text-sm text-muted-foreground mb-4">Automated form filling and submission tracking</p>
               <div className="space-y-4">
-                {applications.map((app, index) => (
-                  <div key={index} className="p-4 border rounded-lg">
-                    <div className="flex items-center justify-between mb-2">
-                      <h4 className="font-medium">{app.name}</h4>
-                      <Badge className={getStatusColor(app.status)}>
-                        {app.status}
-                      </Badge>
+                {applications.length > 0 ? (
+                  applications.slice(0, 3).map((app, index) => (
+                    <div key={index} className="p-4 border rounded-lg">
+                      <div className="flex items-center justify-between mb-2">
+                        <h4 className="font-medium">{app.college?.name || 'Unknown College'}</h4>
+                        <Badge className={getStatusColor(app.status)}>
+                          {getStatusDisplay(app.status)}
+                        </Badge>
+                      </div>
+                      <div className="flex items-center justify-between text-sm text-muted-foreground mb-2">
+                        <span>Status: {app.status}</span>
+                        <span>Due: {app.college?.application_deadline || 'TBD'}</span>
+                      </div>
+                      <Progress value={app.status === 'submitted' ? 100 : app.status === 'in_progress' ? 75 : 25} className="mb-2" />
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="text-green-600">8 hours saved</span>
+                        <span>Created: {new Date(app.created_at).toLocaleDateString()}</span>
+                      </div>
                     </div>
-                    <div className="flex items-center justify-between text-sm text-muted-foreground mb-2">
-                      <span>{app.progress}% complete</span>
-                      <span>Due: {app.deadline}</span>
-                    </div>
-                    <Progress value={app.progress} className="mb-2" />
-                    <div className="flex items-center justify-between text-xs">
-                      <span className="text-green-600">{app.timesSaved} hours saved</span>
-                      <span>Due {app.deadline}</span>
-                    </div>
+                  ))
+                ) : (
+                  <div className="text-center py-8">
+                    <p className="text-muted-foreground mb-4">No applications yet</p>
+                    <Button asChild>
+                      <Link to="/college-search">Start Your First Application</Link>
+                    </Button>
                   </div>
-                ))}
+                )}
               </div>
             </CardContent>
           </Card>
 
-          {/* AI Essay Assistant */}
+          {/* Profile Summary */}
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle>AI Essay Assistant</CardTitle>
+              <CardTitle>Your Profile</CardTitle>
               <Button variant="outline" size="sm" asChild>
-                <Link to="/essay-assistant">Write Essay</Link>
+                <Link to="/profile">Edit Profile</Link>
               </Button>
             </CardHeader>
             <CardContent>
-              <p className="text-sm text-muted-foreground mb-4">Mid-tier university focused guidance</p>
-              <div className="space-y-4">
-                {essays.map((essay, index) => (
-                  <div key={index} className="p-4 border rounded-lg">
-                    <div className="flex items-center justify-between mb-2">
-                      <h4 className="font-medium">{essay.title}</h4>
-                      <Badge className={getStatusColor(essay.status)}>
-                        {essay.status}
-                      </Badge>
-                    </div>
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="text-muted-foreground">Last edited: {essay.lastEdited}</span>
-                      <span className="font-medium">
-                        AI Score: <span className="text-primary">{essay.score}</span>
-                      </span>
-                    </div>
-                  </div>
-                ))}
+              <div className="space-y-3">
+                <div className="flex justify-between">
+                  <span>Name:</span>
+                  <span className="font-medium">
+                    {profile?.first_name && profile?.last_name 
+                      ? `${profile.first_name} ${profile.last_name}`
+                      : 'Not set'
+                    }
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span>High School:</span>
+                  <span className="font-medium">{profile?.high_school || 'Not set'}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>GPA:</span>
+                  <span className="font-medium">{profile?.gpa || 'Not set'}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>SAT Score:</span>
+                  <span className="font-medium">{profile?.sat_score || 'Not set'}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Intended Major:</span>
+                  <span className="font-medium">{profile?.intended_major || 'Not set'}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Graduation Year:</span>
+                  <span className="font-medium">{profile?.graduation_year || 'Not set'}</span>
+                </div>
               </div>
             </CardContent>
           </Card>

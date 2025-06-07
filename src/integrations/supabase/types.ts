@@ -9,7 +9,251 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      [_ in never]: never
+      applications: {
+        Row: {
+          application_type: string | null
+          college_id: string | null
+          created_at: string | null
+          decision_date: string | null
+          id: string
+          notes: string | null
+          status: string | null
+          submitted_at: string | null
+          updated_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          application_type?: string | null
+          college_id?: string | null
+          created_at?: string | null
+          decision_date?: string | null
+          id?: string
+          notes?: string | null
+          status?: string | null
+          submitted_at?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          application_type?: string | null
+          college_id?: string | null
+          created_at?: string | null
+          decision_date?: string | null
+          id?: string
+          notes?: string | null
+          status?: string | null
+          submitted_at?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "applications_college_id_fkey"
+            columns: ["college_id"]
+            isOneToOne: false
+            referencedRelation: "colleges"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      college_majors: {
+        Row: {
+          college_id: string | null
+          id: string
+          major_name: string
+        }
+        Insert: {
+          college_id?: string | null
+          id?: string
+          major_name: string
+        }
+        Update: {
+          college_id?: string | null
+          id?: string
+          major_name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "college_majors_college_id_fkey"
+            columns: ["college_id"]
+            isOneToOne: false
+            referencedRelation: "colleges"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      colleges: {
+        Row: {
+          acceptance_rate: number | null
+          application_deadline: string | null
+          created_at: string | null
+          early_deadline: string | null
+          enrollment: number | null
+          id: string
+          location: string | null
+          name: string
+          ranking: string | null
+          state: string | null
+          tuition_in_state: number | null
+          tuition_out_state: number | null
+          website_url: string | null
+        }
+        Insert: {
+          acceptance_rate?: number | null
+          application_deadline?: string | null
+          created_at?: string | null
+          early_deadline?: string | null
+          enrollment?: number | null
+          id?: string
+          location?: string | null
+          name: string
+          ranking?: string | null
+          state?: string | null
+          tuition_in_state?: number | null
+          tuition_out_state?: number | null
+          website_url?: string | null
+        }
+        Update: {
+          acceptance_rate?: number | null
+          application_deadline?: string | null
+          created_at?: string | null
+          early_deadline?: string | null
+          enrollment?: number | null
+          id?: string
+          location?: string | null
+          name?: string
+          ranking?: string | null
+          state?: string | null
+          tuition_in_state?: number | null
+          tuition_out_state?: number | null
+          website_url?: string | null
+        }
+        Relationships: []
+      }
+      essays: {
+        Row: {
+          ai_feedback: string | null
+          application_id: string | null
+          content: string | null
+          created_at: string | null
+          id: string
+          prompt: string | null
+          status: string | null
+          title: string
+          updated_at: string | null
+          user_id: string | null
+          word_count: number | null
+        }
+        Insert: {
+          ai_feedback?: string | null
+          application_id?: string | null
+          content?: string | null
+          created_at?: string | null
+          id?: string
+          prompt?: string | null
+          status?: string | null
+          title: string
+          updated_at?: string | null
+          user_id?: string | null
+          word_count?: number | null
+        }
+        Update: {
+          ai_feedback?: string | null
+          application_id?: string | null
+          content?: string | null
+          created_at?: string | null
+          id?: string
+          prompt?: string | null
+          status?: string | null
+          title?: string
+          updated_at?: string | null
+          user_id?: string | null
+          word_count?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "essays_application_id_fkey"
+            columns: ["application_id"]
+            isOneToOne: false
+            referencedRelation: "applications"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          act_score: number | null
+          created_at: string | null
+          email: string | null
+          first_name: string | null
+          gpa: number | null
+          graduation_year: number | null
+          high_school: string | null
+          id: string
+          intended_major: string | null
+          last_name: string | null
+          sat_score: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          act_score?: number | null
+          created_at?: string | null
+          email?: string | null
+          first_name?: string | null
+          gpa?: number | null
+          graduation_year?: number | null
+          high_school?: string | null
+          id: string
+          intended_major?: string | null
+          last_name?: string | null
+          sat_score?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          act_score?: number | null
+          created_at?: string | null
+          email?: string | null
+          first_name?: string | null
+          gpa?: number | null
+          graduation_year?: number | null
+          high_school?: string | null
+          id?: string
+          intended_major?: string | null
+          last_name?: string | null
+          sat_score?: number | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      saved_colleges: {
+        Row: {
+          college_id: string | null
+          created_at: string | null
+          id: string
+          user_id: string | null
+        }
+        Insert: {
+          college_id?: string | null
+          created_at?: string | null
+          id?: string
+          user_id?: string | null
+        }
+        Update: {
+          college_id?: string | null
+          created_at?: string | null
+          id?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "saved_colleges_college_id_fkey"
+            columns: ["college_id"]
+            isOneToOne: false
+            referencedRelation: "colleges"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never

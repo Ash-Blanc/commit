@@ -1,45 +1,91 @@
 
-import { Toaster } from "@/components/ui/toaster";
-import { Toaster as Sonner } from "@/components/ui/sonner";
-import { TooltipProvider } from "@/components/ui/tooltip";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
-import { useState } from "react";
-import Landing from "./pages/Landing";
-import Dashboard from "./pages/Dashboard";
-import EssayAssistant from "./pages/EssayAssistant";
-import CollegeSearch from "./pages/CollegeSearch";
-import Applications from "./pages/Applications";
-import Profile from "./pages/Profile";
-import Admin from "./pages/Admin";
-import NotFound from "./pages/NotFound";
-import { AuthProvider } from "./contexts/AuthContext";
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { Toaster } from '@/components/ui/toaster';
+import { AuthProvider } from '@/contexts/AuthContext';
+import ProtectedRoute from '@/components/ProtectedRoute';
+
+// Pages
+import Landing from '@/pages/Landing';
+import Auth from '@/pages/Auth';
+import Dashboard from '@/pages/Dashboard';
+import CollegeSearch from '@/pages/CollegeSearch';
+import Applications from '@/pages/Applications';
+import EssayAssistant from '@/pages/EssayAssistant';
+import Profile from '@/pages/Profile';
+import Admin from '@/pages/Admin';
+import NotFound from '@/pages/NotFound';
+
+import './App.css';
 
 const queryClient = new QueryClient();
 
-const App = () => {
+function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <AuthProvider>
-          <Toaster />
-          <Sonner />
-          <BrowserRouter>
+      <AuthProvider>
+        <Router>
+          <div className="min-h-screen bg-background">
             <Routes>
               <Route path="/" element={<Landing />} />
-              <Route path="/dashboard" element={<Dashboard />} />
-              <Route path="/essay-assistant" element={<EssayAssistant />} />
-              <Route path="/college-search" element={<CollegeSearch />} />
-              <Route path="/applications" element={<Applications />} />
-              <Route path="/profile" element={<Profile />} />
-              <Route path="/admin" element={<Admin />} />
-              <Route path="*" element={<NotFound />} />
+              <Route path="/auth" element={<Auth />} />
+              <Route 
+                path="/dashboard" 
+                element={
+                  <ProtectedRoute>
+                    <Dashboard />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="/college-search" 
+                element={
+                  <ProtectedRoute>
+                    <CollegeSearch />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="/applications" 
+                element={
+                  <ProtectedRoute>
+                    <Applications />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="/essay-assistant" 
+                element={
+                  <ProtectedRoute>
+                    <EssayAssistant />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="/profile" 
+                element={
+                  <ProtectedRoute>
+                    <Profile />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="/admin" 
+                element={
+                  <ProtectedRoute>
+                    <Admin />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route path="/404" element={<NotFound />} />
+              <Route path="*" element={<Navigate to="/404" replace />} />
             </Routes>
-          </BrowserRouter>
-        </AuthProvider>
-      </TooltipProvider>
+            <Toaster />
+          </div>
+        </Router>
+      </AuthProvider>
     </QueryClientProvider>
   );
-};
+}
 
 export default App;
