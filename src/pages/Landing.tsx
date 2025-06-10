@@ -51,13 +51,13 @@ const Landing = () => {
           </p>
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-12">
-            <Button size="md" className="text-lg px-6 py-6 h-auto" asChild>
+            <Button size="md" className="text-lg px-6 py-6" asChild>
               <Link to="/auth">
                 Start Automating Now
                 <span className="ml-2">→</span>
               </Link>
             </Button>
-            <Button variant="outline" size="md" className="text-lg px-6 py-6 h-auto">
+            <Button variant="outline" size="md" className="text-lg px-6 py-6">
               Watch 2-Min Demo
             </Button>
           </div>
