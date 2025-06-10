@@ -48,7 +48,12 @@ export const useOnboarding = () => {
 
   useEffect(() => {
     const hasCompleted = localStorage.getItem('onboarding-completed');
-    if (!hasCompleted) {
+    const userFirstVisit = localStorage.getItem('user-first-visit');
+    
+    // Only show onboarding if user has never completed it AND it's their first visit
+    if (!hasCompleted && !userFirstVisit) {
+      // Mark that user has visited the dashboard
+      localStorage.setItem('user-first-visit', 'true');
       setTimeout(() => setIsActive(true), 1000); // Delay to let page load
     } else {
       setHasSeenOnboarding(true);
@@ -82,8 +87,7 @@ export const useOnboarding = () => {
   const restartOnboarding = () => {
     setCurrentStep(0);
     setIsActive(true);
-    localStorage.removeItem('onboarding-completed');
-    setHasSeenOnboarding(false);
+    // Don't remove the completion flag, just restart for demo purposes
   };
 
   return {
