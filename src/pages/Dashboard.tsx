@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
@@ -7,14 +6,28 @@ import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
 import { useProfile } from '@/hooks/useProfile';
 import { useApplications } from '@/hooks/useApplications';
+import { useOnboarding } from '@/hooks/useOnboarding';
+import { OnboardingTooltip } from '@/components/OnboardingTooltip';
 import Navbar from '@/components/Navbar';
 import { Link } from 'react-router-dom';
+import { HelpCircle } from 'lucide-react';
 
 const Dashboard = () => {
   const { user } = useAuth();
   const { profile, loading: profileLoading } = useProfile();
   const { applications, loading: applicationsLoading } = useApplications();
   const [currentTime, setCurrentTime] = useState(new Date());
+  
+  const {
+    isActive: isOnboardingActive,
+    currentStep,
+    steps,
+    hasSeenOnboarding,
+    nextStep,
+    prevStep,
+    skipOnboarding,
+    restartOnboarding
+  } = useOnboarding();
 
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 1000);
@@ -62,18 +75,34 @@ const Dashboard = () => {
       <Navbar />
       
       <main className="container mx-auto px-4 py-8">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold mb-2">
-            Welcome back, {profile?.first_name || user?.email?.split('@')[0]}! 👋
-          </h1>
-          <p className="text-muted-foreground">
-            You've saved <span className="font-semibold text-green-600">{totalTimesSaved} hours</span> with Commit's automation. 
-            <span className="font-semibold"> {applications.length}</span> applications in progress, <span className="font-semibold">{submittedApps}</span> auto-submitted!
-          </p>
+        {/* Welcome section with onboarding target */}
+        <div className="mb-8" data-onboarding="welcome">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-3xl font-bold mb-2">
+                Welcome back, {profile?.first_name || user?.email?.split('@')[0]}! 👋
+              </h1>
+              <p className="text-muted-foreground">
+                You've saved <span className="font-semibold text-green-600">{totalTimesSaved} hours</span> with Commit's automation. 
+                <span className="font-semibold"> {applications.length}</span> applications in progress, <span className="font-semibold">{submittedApps}</span> auto-submitted!
+              </p>
+            </div>
+            {hasSeenOnboarding && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={restartOnboarding}
+                className="flex items-center space-x-2"
+              >
+                <HelpCircle className="w-4 h-4" />
+                <span>Take Tour</span>
+              </Button>
+            )}
+          </div>
         </div>
 
-        {/* Stats Overview */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+        {/* Stats Overview with onboarding target */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8" data-onboarding="stats">
           <Card>
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
@@ -136,8 +165,8 @@ const Dashboard = () => {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* Application Tracker */}
-          <Card>
+          {/* Application Tracker with onboarding target */}
+          <Card data-onboarding="applications">
             <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle>Smart Application Tracker</CardTitle>
               <Button variant="outline" size="sm" asChild>
@@ -179,8 +208,8 @@ const Dashboard = () => {
             </CardContent>
           </Card>
 
-          {/* Profile Summary */}
-          <Card>
+          {/* Profile Summary with onboarding target */}
+          <Card data-onboarding="profile">
             <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle>Your Profile</CardTitle>
               <Button variant="outline" size="sm" asChild>
@@ -223,8 +252,8 @@ const Dashboard = () => {
           </Card>
         </div>
 
-        {/* Quick Actions */}
-        <div className="mt-8">
+        {/* Quick Actions with onboarding target */}
+        <div className="mt-8" data-onboarding="actions">
           <h2 className="text-xl font-semibold mb-4">Quick Actions</h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <Button variant="outline" className="h-16 flex flex-col items-center justify-center" asChild>
@@ -248,6 +277,19 @@ const Dashboard = () => {
           </div>
         </div>
       </main>
+
+      {/* Onboarding Tooltip */}
+      {isOnboardingActive && (
+        <OnboardingTooltip
+          step={steps[currentStep]}
+          currentStep={currentStep}
+          totalSteps={steps.length}
+          onNext={nextStep}
+          onPrev={prevStep}
+          onSkip={skipOnboarding}
+          isVisible={isOnboardingActive}
+        />
+      )}
     </div>
   );
 };
