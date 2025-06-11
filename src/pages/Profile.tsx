@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -104,7 +105,7 @@ const Profile = () => {
       <div className="min-h-screen bg-background">
         <Navbar />
         <main className="container mx-auto px-4 py-8">
-          <div className="text-center">Loading profile...</div>
+          <div className="text-center text-lg">Loading profile...</div>
         </main>
       </div>
     );
@@ -116,8 +117,8 @@ const Profile = () => {
       
       <main className="container mx-auto px-4 py-8 max-w-7xl">
         <div className="mb-8 max-w-4xl mx-auto">
-          <h1 className="text-3xl font-bold mb-2">Student Profile</h1>
-          <p className="text-muted-foreground">
+          <h1 className="text-4xl font-bold mb-3">Student Profile</h1>
+          <p className="text-muted-foreground text-lg">
             Keep your profile updated to get better AI recommendations and personalized guidance.
           </p>
         </div>
@@ -127,48 +128,48 @@ const Profile = () => {
           <div className="lg:col-span-2 space-y-6">
             <Card className="max-w-4xl">
               <CardHeader className="flex flex-row items-center justify-between">
-                <CardTitle>Personal Information</CardTitle>
+                <CardTitle className="text-2xl">Personal Information</CardTitle>
                 <Button 
                   variant={isEditing ? "default" : "outline"}
                   onClick={() => isEditing ? handleSave() : setIsEditing(true)}
-                  size="sm"
-                  className="max-w-xs"
+                  size="default"
+                  className="w-auto"
                 >
                   {isEditing ? 'Save Changes' : 'Edit Profile'}
                 </Button>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor="first_name">First Name</Label>
+              <CardContent className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-2">
+                    <Label htmlFor="first_name" className="text-base font-medium">First Name</Label>
                     <Input
                       id="first_name"
                       value={profileData.first_name}
                       onChange={(e) => setProfileData(prev => ({ ...prev, first_name: e.target.value }))}
                       disabled={!isEditing}
-                      className="max-w-xs"
+                      className="text-base h-11"
                     />
                   </div>
-                  <div>
-                    <Label htmlFor="last_name">Last Name</Label>
+                  <div className="space-y-2">
+                    <Label htmlFor="last_name" className="text-base font-medium">Last Name</Label>
                     <Input
                       id="last_name"
                       value={profileData.last_name}
                       onChange={(e) => setProfileData(prev => ({ ...prev, last_name: e.target.value }))}
                       disabled={!isEditing}
-                      className="max-w-xs"
+                      className="text-base h-11"
                     />
                   </div>
                 </div>
-                <div>
-                  <Label htmlFor="email">Email</Label>
+                <div className="space-y-2">
+                  <Label htmlFor="email" className="text-base font-medium">Email</Label>
                   <Input
                     id="email"
                     type="email"
                     value={profileData.email}
                     onChange={(e) => setProfileData(prev => ({ ...prev, email: e.target.value }))}
                     disabled={!isEditing}
-                    className="max-w-md"
+                    className="text-base h-11 max-w-md"
                   />
                 </div>
               </CardContent>
@@ -176,12 +177,12 @@ const Profile = () => {
 
             <Card className="max-w-4xl">
               <CardHeader>
-                <CardTitle>Academic Information</CardTitle>
+                <CardTitle className="text-2xl">Academic Information</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div>
-                    <Label htmlFor="gpa">GPA</Label>
+              <CardContent className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <div className="space-y-2">
+                    <Label htmlFor="gpa" className="text-base font-medium">GPA</Label>
                     <Input
                       id="gpa"
                       type="number"
@@ -190,41 +191,41 @@ const Profile = () => {
                       value={profileData.gpa}
                       onChange={(e) => setProfileData(prev => ({ ...prev, gpa: parseFloat(e.target.value) || 0 }))}
                       disabled={!isEditing}
-                      className="max-w-xs"
+                      className="text-base h-11"
                     />
                   </div>
-                  <div>
-                    <Label htmlFor="sat">SAT Score</Label>
+                  <div className="space-y-2">
+                    <Label htmlFor="sat" className="text-base font-medium">SAT Score</Label>
                     <Input
                       id="sat"
                       type="number"
                       value={profileData.sat_score}
                       onChange={(e) => setProfileData(prev => ({ ...prev, sat_score: parseInt(e.target.value) || 0 }))}
                       disabled={!isEditing}
-                      className="max-w-xs"
+                      className="text-base h-11"
                     />
                   </div>
-                  <div>
-                    <Label htmlFor="act">ACT Score</Label>
+                  <div className="space-y-2">
+                    <Label htmlFor="act" className="text-base font-medium">ACT Score</Label>
                     <Input
                       id="act"
                       type="number"
                       value={profileData.act_score}
                       onChange={(e) => setProfileData(prev => ({ ...prev, act_score: parseInt(e.target.value) || 0 }))}
                       disabled={!isEditing}
-                      className="max-w-xs"
+                      className="text-base h-11"
                     />
                   </div>
                 </div>
                 
-                <div>
-                  <Label htmlFor="major">Intended Major</Label>
+                <div className="space-y-2">
+                  <Label htmlFor="major" className="text-base font-medium">Intended Major</Label>
                   <Select
                     value={profileData.intended_major}
                     onValueChange={(value) => setProfileData(prev => ({ ...prev, intended_major: value }))}
                     disabled={!isEditing}
                   >
-                    <SelectTrigger className="max-w-md">
+                    <SelectTrigger className="max-w-md text-base h-11">
                       <SelectValue placeholder="Select your intended major" />
                     </SelectTrigger>
                     <SelectContent>
@@ -240,26 +241,26 @@ const Profile = () => {
                   </Select>
                 </div>
 
-                <div>
-                  <Label htmlFor="high_school">High School</Label>
+                <div className="space-y-2">
+                  <Label htmlFor="high_school" className="text-base font-medium">High School</Label>
                   <Input
                     id="high_school"
                     value={profileData.high_school}
                     onChange={(e) => setProfileData(prev => ({ ...prev, high_school: e.target.value }))}
                     disabled={!isEditing}
-                    className="max-w-md"
+                    className="text-base h-11 max-w-md"
                   />
                 </div>
 
-                <div>
-                  <Label htmlFor="graduation_year">Graduation Year</Label>
+                <div className="space-y-2">
+                  <Label htmlFor="graduation_year" className="text-base font-medium">Graduation Year</Label>
                   <Input
                     id="graduation_year"
                     type="number"
                     value={profileData.graduation_year || ''}
                     onChange={(e) => setProfileData(prev => ({ ...prev, graduation_year: parseInt(e.target.value) || null }))}
                     disabled={!isEditing}
-                    className="max-w-xs"
+                    className="text-base h-11 max-w-xs"
                   />
                 </div>
               </CardContent>
@@ -267,28 +268,28 @@ const Profile = () => {
 
             <Card>
               <CardHeader className="flex flex-row items-center justify-between">
-                <CardTitle>Extracurricular Activities</CardTitle>
+                <CardTitle className="text-2xl">Extracurricular Activities</CardTitle>
                 {isEditing && (
-                  <Button variant="outline" size="sm" onClick={addExtracurricular}>
+                  <Button variant="outline" size="default" onClick={addExtracurricular}>
                     Add Activity
                   </Button>
                 )}
               </CardHeader>
               <CardContent>
-                <div className="space-y-3">
+                <div className="space-y-4">
                   {profileData.extracurriculars.map((activity, index) => (
-                    <div key={index} className="flex items-center space-x-2">
+                    <div key={index} className="flex items-center space-x-3">
                       <Input
                         value={activity}
                         onChange={(e) => updateExtracurricular(index, e.target.value)}
                         placeholder="Enter extracurricular activity"
                         disabled={!isEditing}
-                        className="flex-1"
+                        className="flex-1 text-base h-11"
                       />
                       {isEditing && (
                         <Button
                           variant="outline"
-                          size="sm"
+                          size="default"
                           onClick={() => removeExtracurricular(index)}
                         >
                           Remove
@@ -297,7 +298,7 @@ const Profile = () => {
                     </div>
                   ))}
                   {profileData.extracurriculars.length === 0 && (
-                    <p className="text-muted-foreground">No extracurricular activities added yet.</p>
+                    <p className="text-muted-foreground text-base">No extracurricular activities added yet.</p>
                   )}
                 </div>
               </CardContent>
@@ -305,26 +306,26 @@ const Profile = () => {
 
             <Card>
               <CardHeader>
-                <CardTitle>College Preferences</CardTitle>
+                <CardTitle className="text-2xl">College Preferences</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
                   <div className="flex flex-wrap gap-2">
                     {profileData.collegePreferences.map((pref, index) => (
-                      <Badge key={index} variant="secondary">
+                      <Badge key={index} variant="secondary" className="text-sm px-3 py-1">
                         {pref}
                       </Badge>
                     ))}
                   </div>
                   {isEditing && (
-                    <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                       {['Urban setting', 'Rural setting', 'Research opportunities', 'Technology-focused', 
                         'Liberal arts', 'Large campus', 'Small campus', 'Diverse student body'].map((option) => (
                         <Button
                           key={option}
                           variant="outline"
-                          size="sm"
-                          className="justify-start"
+                          size="default"
+                          className="justify-start text-sm h-auto py-3"
                           onClick={() => {
                             const isSelected = profileData.collegePreferences.includes(option);
                             setProfileData(prev => ({
@@ -347,37 +348,37 @@ const Profile = () => {
           </div>
 
           {/* Profile Summary Sidebar */}
-          <div className="space-y-6 max-w-sm">
+          <div className="space-y-6 w-full max-w-sm">
             <Card>
               <CardHeader>
-                <CardTitle>Profile Strength</CardTitle>
+                <CardTitle className="text-xl">Profile Strength</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-center mb-4">
-                  <div className="text-3xl font-bold text-primary mb-2">85%</div>
-                  <Badge variant="secondary">Strong Candidate</Badge>
+                <div className="text-center mb-6">
+                  <div className="text-4xl font-bold text-primary mb-3">85%</div>
+                  <Badge variant="secondary" className="text-sm px-3 py-1">Strong Candidate</Badge>
                 </div>
-                <div className="space-y-3">
+                <div className="space-y-4">
                   <div>
-                    <div className="flex justify-between text-sm mb-1">
-                      <span>Academic Profile:</span>
+                    <div className="flex justify-between text-sm mb-2">
+                      <span className="font-medium">Academic Profile:</span>
                       <span className="font-medium text-green-600">Excellent</span>
                     </div>
-                    <Progress value={85} className="h-2" />
+                    <Progress value={85} className="h-3" />
                   </div>
                   <div>
-                    <div className="flex justify-between text-sm mb-1">
-                      <span>Extracurriculars:</span>
+                    <div className="flex justify-between text-sm mb-2">
+                      <span className="font-medium">Extracurriculars:</span>
                       <span className="font-medium text-blue-600">Good</span>
                     </div>
-                    <Progress value={70} className="h-2" />
+                    <Progress value={70} className="h-3" />
                   </div>
                   <div>
-                    <div className="flex justify-between text-sm mb-1">
-                      <span>Profile Completeness:</span>
+                    <div className="flex justify-between text-sm mb-2">
+                      <span className="font-medium">Profile Completeness:</span>
                       <span className="font-medium">90%</span>
                     </div>
-                    <Progress value={90} className="h-2" />
+                    <Progress value={90} className="h-3" />
                   </div>
                 </div>
               </CardContent>
@@ -385,21 +386,21 @@ const Profile = () => {
 
             <Card>
               <CardHeader>
-                <CardTitle>AI Recommendations</CardTitle>
+                <CardTitle className="text-xl">AI Recommendations</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="p-3 bg-blue-50 rounded-lg">
-                  <p className="text-sm text-blue-900">
+              <CardContent className="space-y-4">
+                <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
+                  <p className="text-sm text-blue-900 leading-relaxed">
                     📈 Your GPA puts you in a competitive position for mid-tier universities
                   </p>
                 </div>
-                <div className="p-3 bg-green-50 rounded-lg">
-                  <p className="text-sm text-green-900">
+                <div className="p-4 bg-green-50 rounded-lg border border-green-200">
+                  <p className="text-sm text-green-900 leading-relaxed">
                     🎯 Consider applying to 2-3 more safety schools
                   </p>
                 </div>
-                <div className="p-3 bg-yellow-50 rounded-lg">
-                  <p className="text-sm text-yellow-900">
+                <div className="p-4 bg-yellow-50 rounded-lg border border-yellow-200">
+                  <p className="text-sm text-yellow-900 leading-relaxed">
                     ✍️ Focus on personalizing your essays for each college
                   </p>
                 </div>
@@ -408,22 +409,22 @@ const Profile = () => {
 
             <Card>
               <CardHeader>
-                <CardTitle>Quick Stats</CardTitle>
+                <CardTitle className="text-xl">Quick Stats</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-2 text-sm">
-                <div className="flex justify-between">
+              <CardContent className="space-y-3">
+                <div className="flex justify-between text-base">
                   <span>Applications Started:</span>
                   <span className="font-medium">3</span>
                 </div>
-                <div className="flex justify-between">
+                <div className="flex justify-between text-base">
                   <span>Essays Written:</span>
                   <span className="font-medium">5</span>
                 </div>
-                <div className="flex justify-between">
+                <div className="flex justify-between text-base">
                   <span>Time Saved:</span>
                   <span className="font-medium text-green-600">26 hours</span>
                 </div>
-                <div className="flex justify-between">
+                <div className="flex justify-between text-base">
                   <span>Profile Views:</span>
                   <span className="font-medium">12</span>
                 </div>
