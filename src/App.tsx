@@ -10,6 +10,7 @@ import Landing from '@/pages/Landing';
 import Auth from '@/pages/Auth';
 import Dashboard from '@/pages/Dashboard';
 import CollegeSearch from '@/pages/CollegeSearch';
+import Recommendations from '@/pages/Recommendations';
 import Applications from '@/pages/Applications';
 import EssayAssistant from '@/pages/EssayAssistant';
 import Profile from '@/pages/Profile';
@@ -42,6 +43,14 @@ function App() {
                 element={
                   <ProtectedRoute>
                     <CollegeSearch />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="/recommendations" 
+                element={
+                  <ProtectedRoute>
+                    <Recommendations />
                   </ProtectedRoute>
                 } 
               />

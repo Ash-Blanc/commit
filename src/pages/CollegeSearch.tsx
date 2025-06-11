@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -7,59 +7,64 @@ import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Slider } from '@/components/ui/slider';
 import Navbar from '@/components/Navbar';
+import { useColleges, College, CollegeSearchFilters } from '@/hooks/useColleges';
+import { useProfile } from '@/hooks/useProfile';
+import { useApplications } from '@/hooks/useApplications';
+import { toast } from '@/hooks/use-toast';
 
 const CollegeSearch = () => {
+  const { searchColleges } = useColleges();
+  const { profile } = useProfile();
+  const { createApplication } = useApplications();
+  const [colleges, setColleges] = useState<College[]>([]);
+  const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
-  const [location, setLocation] = useState('');
-  const [tuitionRange, setTuitionRange] = useState([0, 50000]);
-  const [enrollmentSize, setEnrollmentSize] = useState('');
+  const [filters, setFilters] = useState<CollegeSearchFilters>({
+    tuitionMin: 0,
+    tuitionMax: 50000
+  });
 
-  const colleges = [
-    {
-      name: 'University of Florida',
-      location: 'Gainesville, FL',
-      tuition: '$6,380',
-      acceptanceRate: '31%',
-      enrollment: '52,000',
-      ranking: '#5 Public',
-      majors: ['Engineering', 'Business', 'Medicine', 'Computer Science'],
-      match: 95,
-      distance: '15 miles'
-    },
-    {
-      name: 'Florida State University',
-      location: 'Tallahassee, FL',
-      tuition: '$5,656',
-      acceptanceRate: '36%',
-      enrollment: '41,000',
-      ranking: '#18 Public',
-      majors: ['Psychology', 'Criminal Justice', 'Film School', 'Business'],
-      match: 88,
-      distance: '180 miles'
-    },
-    {
-      name: 'University of Central Florida',
-      location: 'Orlando, FL',
-      tuition: '$6,368',
-      acceptanceRate: '44%',
-      enrollment: '70,000',
-      ranking: '#160 National',
-      majors: ['Engineering', 'Business', 'Health Sciences', 'Education'],
-      match: 82,
-      distance: '120 miles'
-    },
-    {
-      name: 'Florida Institute of Technology',
-      location: 'Melbourne, FL',
-      tuition: '$43,470',
-      acceptanceRate: '65%',
-      enrollment: '6,000',
-      ranking: '#178 National',
-      majors: ['Engineering', 'Computer Science', 'Aviation', 'Ocean Engineering'],
-      match: 90,
-      distance: '200 miles'
+  const handleSearch = async () => {
+    setLoading(true);
+    try {
+      const results = await searchColleges({
+        ...filters,
+        ...(searchTerm && { major: searchTerm })
+      });
+      setColleges(results);
+    } catch (error) {
+      console.error('Search error:', error);
+      toast({
+        title: "Search Error",
+        description: "Failed to search colleges. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
     }
-  ];
+  };
+
+  const handleAddToApplications = async (college: College) => {
+    try {
+      await createApplication({
+        college_id: college.id,
+        application_type: 'regular',
+        status: 'draft',
+        notes: `Application for ${college.name}`
+      });
+      
+      toast({
+        title: "Success!",
+        description: `Added ${college.name} to your applications.`,
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to add college to applications.",
+        variant: "destructive",
+      });
+    }
+  };
 
   const getMatchColor = (match: number) => {
     if (match >= 90) return 'bg-green-500';
@@ -68,11 +73,15 @@ const CollegeSearch = () => {
     return 'bg-gray-500';
   };
 
+  useEffect(() => {
+    handleSearch();
+  }, []);
+
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
       
-      <main className="container mx-auto px-4 py-8">
+      <main className="container mx-auto px-4 py-8 max-w-7xl">
         <div className="mb-8">
           <h1 className="text-3xl font-bold mb-2">College Search & Research</h1>
           <p className="text-muted-foreground">
@@ -92,34 +101,35 @@ const CollegeSearch = () => {
                 <div>
                   <label className="text-sm font-medium mb-2 block">Search Colleges</label>
                   <Input
-                    placeholder="College name or keyword"
+                    placeholder="College name or major"
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                   />
                 </div>
 
                 <div>
-                  <label className="text-sm font-medium mb-2 block">Location</label>
-                  <Select value={location} onValueChange={setLocation}>
+                  <label className="text-sm font-medium mb-2 block">State</label>
+                  <Select value={filters.state || ''} onValueChange={(value) => setFilters(prev => ({ ...prev, state: value || undefined }))}>
                     <SelectTrigger>
                       <SelectValue placeholder="Select state" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="fl">Florida</SelectItem>
-                      <SelectItem value="ca">California</SelectItem>
-                      <SelectItem value="ny">New York</SelectItem>
-                      <SelectItem value="tx">Texas</SelectItem>
+                      <SelectItem value="">All States</SelectItem>
+                      <SelectItem value="FL">Florida</SelectItem>
+                      <SelectItem value="CA">California</SelectItem>
+                      <SelectItem value="NY">New York</SelectItem>
+                      <SelectItem value="TX">Texas</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
 
                 <div>
                   <label className="text-sm font-medium mb-2 block">
-                    Tuition Range: ${tuitionRange[0].toLocaleString()} - ${tuitionRange[1].toLocaleString()}
+                    Tuition Range: ${filters.tuitionMin?.toLocaleString()} - ${filters.tuitionMax?.toLocaleString()}
                   </label>
                   <Slider
-                    value={tuitionRange}
-                    onValueChange={setTuitionRange}
+                    value={[filters.tuitionMin || 0, filters.tuitionMax || 50000]}
+                    onValueChange={([min, max]) => setFilters(prev => ({ ...prev, tuitionMin: min, tuitionMax: max }))}
                     max={50000}
                     step={1000}
                     className="w-full"
@@ -128,11 +138,12 @@ const CollegeSearch = () => {
 
                 <div>
                   <label className="text-sm font-medium mb-2 block">Enrollment Size</label>
-                  <Select value={enrollmentSize} onValueChange={setEnrollmentSize}>
+                  <Select value={filters.enrollmentSize || ''} onValueChange={(value) => setFilters(prev => ({ ...prev, enrollmentSize: value || undefined }))}>
                     <SelectTrigger>
                       <SelectValue placeholder="Select size" />
                     </SelectTrigger>
                     <SelectContent>
+                      <SelectItem value="">Any Size</SelectItem>
                       <SelectItem value="small">Small (&lt; 5,000)</SelectItem>
                       <SelectItem value="medium">Medium (5,000 - 15,000)</SelectItem>
                       <SelectItem value="large">Large (&gt; 15,000)</SelectItem>
@@ -140,120 +151,150 @@ const CollegeSearch = () => {
                   </Select>
                 </div>
 
-                <Button className="w-full">
-                  🎯 Get AI Recommendations
+                <Button className="w-full" onClick={handleSearch} disabled={loading}>
+                  {loading ? 'Searching...' : '🔍 Search Colleges'}
                 </Button>
               </CardContent>
             </Card>
 
-            {/* Profile Match Card */}
-            <Card className="mt-6">
-              <CardHeader>
-                <CardTitle>Your Profile</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-2 text-sm">
-                <div className="flex justify-between">
-                  <span>GPA:</span>
-                  <span className="font-medium">3.8</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>SAT:</span>
-                  <span className="font-medium">1450</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Major:</span>
-                  <span className="font-medium">Computer Science</span>
-                </div>
-                <div className="pt-2">
-                  <span className="text-xs text-muted-foreground">
-                    Matches are based on your academic profile and preferences
-                  </span>
-                </div>
-              </CardContent>
-            </Card>
+            {/* Profile Summary */}
+            {profile && (
+              <Card className="mt-6">
+                <CardHeader>
+                  <CardTitle>Your Profile</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-2 text-sm">
+                  <div className="flex justify-between">
+                    <span>GPA:</span>
+                    <span className="font-medium">{profile.gpa || 'Not set'}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>SAT:</span>
+                    <span className="font-medium">{profile.sat_score || 'Not set'}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Major:</span>
+                    <span className="font-medium">{profile.intended_major || 'Not set'}</span>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
           </div>
 
           {/* College Results */}
           <div className="lg:col-span-3">
             <div className="flex justify-between items-center mb-6">
               <h2 className="text-xl font-semibold">
-                Found {colleges.length} colleges matching your criteria
+                {loading ? 'Searching...' : `Found ${colleges.length} colleges`}
               </h2>
-              <Select defaultValue="match">
-                <SelectTrigger className="w-48">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="match">Sort by Match</SelectItem>
-                  <SelectItem value="tuition">Sort by Tuition</SelectItem>
-                  <SelectItem value="acceptance">Sort by Acceptance Rate</SelectItem>
-                  <SelectItem value="distance">Sort by Distance</SelectItem>
-                </SelectContent>
-              </Select>
             </div>
 
-            <div className="space-y-6">
-              {colleges.map((college, index) => (
-                <Card key={index} className="hover:shadow-lg transition-shadow">
-                  <CardContent className="p-6">
-                    <div className="flex justify-between items-start mb-4">
-                      <div>
-                        <h3 className="text-xl font-semibold mb-1">{college.name}</h3>
-                        <p className="text-muted-foreground">{college.location}</p>
-                      </div>
-                      <div className="text-right">
-                        <Badge className={`${getMatchColor(college.match)} mb-2`}>
-                          {college.match}% Match
-                        </Badge>
-                        <p className="text-sm text-muted-foreground">{college.distance} away</p>
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
-                      <div>
-                        <p className="text-sm text-muted-foreground">Tuition</p>
-                        <p className="font-semibold">{college.tuition}</p>
-                      </div>
-                      <div>
-                        <p className="text-sm text-muted-foreground">Acceptance Rate</p>
-                        <p className="font-semibold">{college.acceptanceRate}</p>
-                      </div>
-                      <div>
-                        <p className="text-sm text-muted-foreground">Enrollment</p>
-                        <p className="font-semibold">{college.enrollment}</p>
-                      </div>
-                      <div>
-                        <p className="text-sm text-muted-foreground">Ranking</p>
-                        <p className="font-semibold">{college.ranking}</p>
-                      </div>
-                    </div>
-
-                    <div className="mb-4">
-                      <p className="text-sm text-muted-foreground mb-2">Popular Majors</p>
-                      <div className="flex flex-wrap gap-2">
-                        {college.majors.map((major, majorIndex) => (
-                          <Badge key={majorIndex} variant="secondary">
-                            {major}
+            {loading ? (
+              <div className="text-center py-8">
+                <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary mx-auto"></div>
+                <p className="mt-4 text-muted-foreground">Searching colleges...</p>
+              </div>
+            ) : (
+              <div className="space-y-6">
+                {colleges.map((college) => (
+                  <Card key={college.id} className="hover:shadow-lg transition-shadow">
+                    <CardContent className="p-6">
+                      <div className="flex justify-between items-start mb-4">
+                        <div>
+                          <h3 className="text-xl font-semibold mb-1">{college.name}</h3>
+                          <p className="text-muted-foreground">{college.location}</p>
+                        </div>
+                        {college.match_score && (
+                          <Badge className={getMatchColor(college.match_score)}>
+                            {college.match_score}% Match
                           </Badge>
-                        ))}
+                        )}
                       </div>
-                    </div>
 
-                    <div className="flex space-x-3">
-                      <Button variant="outline" size="sm">
-                        💾 Save to List
-                      </Button>
-                      <Button variant="outline" size="sm">
-                        📊 Compare
-                      </Button>
-                      <Button size="sm">
-                        ➕ Add to Applications
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+                        <div>
+                          <p className="text-sm text-muted-foreground">Tuition (Out-of-State)</p>
+                          <p className="font-semibold">
+                            {college.tuition_out_state ? `$${college.tuition_out_state.toLocaleString()}` : 'N/A'}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-sm text-muted-foreground">Acceptance Rate</p>
+                          <p className="font-semibold">
+                            {college.acceptance_rate ? `${(college.acceptance_rate * 100).toFixed(0)}%` : 'N/A'}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-sm text-muted-foreground">Enrollment</p>
+                          <p className="font-semibold">
+                            {college.enrollment ? college.enrollment.toLocaleString() : 'N/A'}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-sm text-muted-foreground">Ranking</p>
+                          <p className="font-semibold">{college.ranking || 'N/A'}</p>
+                        </div>
+                      </div>
+
+                      <div className="mb-4">
+                        <p className="text-sm text-muted-foreground mb-2">Available Majors</p>
+                        <div className="flex flex-wrap gap-2">
+                          {college.majors?.slice(0, 5).map((major, index) => (
+                            <Badge key={index} variant="secondary">
+                              {major}
+                            </Badge>
+                          ))}
+                          {(college.majors?.length || 0) > 5 && (
+                            <Badge variant="outline">
+                              +{(college.majors?.length || 0) - 5} more
+                            </Badge>
+                          )}
+                        </div>
+                      </div>
+
+                      {college.match_reasons && college.match_reasons.length > 0 && (
+                        <div className="mb-4">
+                          <p className="text-sm text-muted-foreground mb-2">Why it's a good match:</p>
+                          <ul className="text-sm space-y-1">
+                            {college.match_reasons.slice(0, 3).map((reason, index) => (
+                              <li key={index} className="flex items-start">
+                                <span className="text-green-500 mr-2">•</span>
+                                {reason}
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+
+                      <div className="flex space-x-3">
+                        <Button 
+                          size="sm"
+                          onClick={() => handleAddToApplications(college)}
+                        >
+                          ➕ Add to Applications
+                        </Button>
+                        {college.website_url && (
+                          <Button variant="outline" size="sm" asChild>
+                            <a href={college.website_url} target="_blank" rel="noopener noreferrer">
+                              🌐 Visit Website
+                            </a>
+                          </Button>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+
+                {colleges.length === 0 && !loading && (
+                  <div className="text-center py-8">
+                    <p className="text-muted-foreground">No colleges found matching your criteria.</p>
+                    <Button onClick={handleSearch} className="mt-4">
+                      Try Different Filters
+                    </Button>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </div>
       </main>

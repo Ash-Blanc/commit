@@ -6,6 +6,7 @@ export interface College {
   id: string;
   name: string;
   location: string | null;
+  city: string | null;
   state: string | null;
   tuition_in_state: number | null;
   tuition_out_state: number | null;
@@ -15,7 +16,21 @@ export interface College {
   website_url: string | null;
   application_deadline: string | null;
   early_deadline: string | null;
+  college_majors?: { major_name: string }[];
   majors?: string[];
+  match_score?: number;
+  match_reasons?: string[];
+}
+
+export interface CollegeSearchFilters {
+  location?: string;
+  state?: string;
+  major?: string;
+  tuitionMin?: number;
+  tuitionMax?: number;
+  acceptanceRateMin?: number;
+  acceptanceRateMax?: number;
+  enrollmentSize?: string;
 }
 
 export const useColleges = () => {
@@ -30,7 +45,10 @@ export const useColleges = () => {
     try {
       const { data: collegesData, error: collegesError } = await supabase
         .from('colleges')
-        .select('*')
+        .select(`
+          *,
+          college_majors(major_name)
+        `)
         .order('name');
 
       if (collegesError) {
@@ -38,29 +56,9 @@ export const useColleges = () => {
         return;
       }
 
-      // Fetch majors for each college
-      const { data: majorsData, error: majorsError } = await supabase
-        .from('college_majors')
-        .select('college_id, major_name');
-
-      if (majorsError) {
-        console.error('Error fetching majors:', majorsError);
-        return;
-      }
-
-      // Group majors by college
-      const majorsByCollege = majorsData.reduce((acc, major) => {
-        if (!acc[major.college_id]) {
-          acc[major.college_id] = [];
-        }
-        acc[major.college_id].push(major.major_name);
-        return acc;
-      }, {} as Record<string, string[]>);
-
-      // Combine colleges with their majors
       const collegesWithMajors = collegesData.map(college => ({
         ...college,
-        majors: majorsByCollege[college.id] || []
+        majors: college.college_majors?.map(m => m.major_name) || []
       }));
 
       setColleges(collegesWithMajors);
@@ -71,9 +69,42 @@ export const useColleges = () => {
     }
   };
 
+  const searchColleges = async (filters: CollegeSearchFilters): Promise<College[]> => {
+    try {
+      const { data, error } = await supabase.functions.invoke('college-search', {
+        body: filters
+      });
+
+      if (error) throw error;
+
+      return data.colleges.map((college: any) => ({
+        ...college,
+        majors: college.college_majors?.map((m: any) => m.major_name) || []
+      }));
+    } catch (error) {
+      console.error('Error searching colleges:', error);
+      return [];
+    }
+  };
+
+  const getRecommendations = async (): Promise<College[]> => {
+    try {
+      const { data, error } = await supabase.functions.invoke('recommendations');
+
+      if (error) throw error;
+
+      return data.recommendations || [];
+    } catch (error) {
+      console.error('Error getting recommendations:', error);
+      return [];
+    }
+  };
+
   return {
     colleges,
     loading,
     refetch: fetchColleges,
+    searchColleges,
+    getRecommendations,
   };
 };
