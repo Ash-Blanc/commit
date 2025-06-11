@@ -47,7 +47,15 @@ export const useProfile = () => {
       if (error) {
         console.error('Error fetching profile:', error);
       } else {
-        setProfile(data);
+        // Ensure all fields have default values
+        const profileWithDefaults = {
+          ...data,
+          budget: data.budget || null,
+          interests: data.interests || [],
+          extracurriculars: data.extracurriculars || [],
+          target_major: data.target_major || null,
+        };
+        setProfile(profileWithDefaults);
       }
     } catch (error) {
       console.error('Error fetching profile:', error);

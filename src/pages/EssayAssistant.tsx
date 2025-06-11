@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { Editor } from '@tinymce/tinymce-react';
+
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
@@ -12,46 +12,11 @@ import { useEssays, Essay, EssayIdea, EssayOutline, EssayFeedback } from '@/hook
 import { useApplications } from '@/hooks/useApplications';
 import { useProfile } from '@/hooks/useProfile';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Link } from 'react-router-dom';
 import Navbar from '@/components/Navbar';
-import { Separator } from "@/components/ui/separator"
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
-import { Progress } from "@/components/ui/progress"
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog"
-import { Switch } from "@/components/ui/switch"
-import { Slider } from "@/components/ui/slider"
-import { Checkbox } from "@/components/ui/checkbox"
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
-import { Calendar } from "@/components/ui/calendar"
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-  CommandSeparator,
-} from "@/components/ui/command"
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { cn } from "@/lib/utils"
-import { CalendarIcon } from "@radix-ui/react-icons"
-import { format } from "date-fns"
-import { DateRange } from "react-day-picker"
 
 const EssayAssistant = () => {
   const { essayId } = useParams<{ essayId: string }>();
   const navigate = useNavigate();
-  const editorRef = useRef<any>(null);
   const [content, setContent] = useState('');
   const [title, setTitle] = useState('');
   const [prompt, setPrompt] = useState('');
@@ -68,11 +33,6 @@ const EssayAssistant = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [showAISection, setShowAISection] = useState(false);
   const [showFeedbackSection, setShowFeedbackSection] = useState(false);
-	const [isEditorInitialized, setIsEditorInitialized] = useState(false);
-  const [date, setDate] = React.useState<DateRange | undefined>({
-    from: new Date(),
-    to: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-  })
 
   const {
     essays,
@@ -106,16 +66,9 @@ const EssayAssistant = () => {
     fetchEssays();
   }, []);
 
-  const log = () => {
-    if (editorRef.current) {
-      setContent(editorRef.current.getContent());
-      setWordCount(editorRef.current.getContent({ format: 'text' }).split(' ').length);
-    }
-  };
-
-  const handleEditorChange = (content: string, editor: any) => {
-    setContent(content);
-    setWordCount(editor.getContent({ format: 'text' }).split(' ').length);
+  const handleContentChange = (value: string) => {
+    setContent(value);
+    setWordCount(value.split(' ').filter(word => word.length > 0).length);
   };
 
   const handleGenerateIdeas = async () => {
@@ -312,34 +265,16 @@ const EssayAssistant = () => {
 
                 <div>
                   <Label>Content</Label>
-                  <Editor
-                    apiKey="YOUR_API_KEY"
-                    onInit={(evt, editor) => {
-                      editorRef.current = editor
-											setIsEditorInitialized(true)
-										}}
+                  <Textarea
+                    placeholder="Start writing your essay here..."
                     value={content}
-                    onEditorChange={handleEditorChange}
-                    init={{
-                      height: 500,
-                      menubar: true,
-                      plugins: [
-                        'advlist autolink lists link image charmap print preview anchor',
-                        'searchreplace visualblocks code fullscreen',
-                        'insertdatetime media table paste code help wordcount'
-                      ],
-                      toolbar: 'undo redo | formatselect | ' +
-                        'bold italic backcolor | alignleft aligncenter ' +
-                        'alignright alignjustify | bullist numlist outdent indent | ' +
-                        'removeformat | help',
-                      content_style: 'body { font-family:Helvetica,Arial,sans-serif; font-size:14px }'
-                    }}
+                    onChange={(e) => handleContentChange(e.target.value)}
+                    className="min-h-[500px] resize-none"
                   />
                 </div>
 
                 <div className="flex justify-between items-center">
                   <span>Word Count: {wordCount}</span>
-                  <Button onClick={log}>Log editor content</Button>
                 </div>
               </CardContent>
             </Card>
@@ -375,7 +310,7 @@ const EssayAssistant = () => {
                     <SelectContent>
                       {applications.map((app) => (
                         <SelectItem key={app.id} value={app.id}>
-                          {app.college_name} - {app.application_type}
+                          {app.college_id} - {app.application_type}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -406,15 +341,11 @@ const EssayAssistant = () => {
                 </Button>
 
                 <Button
-                  onClick={() => {
-                    const element = document.getElementById('feedback-section');
-                    if (element) {
-                      (element as HTMLElement).click();
-                    }
-                  }}
+                  onClick={handleGetFeedback}
+                  disabled={isGettingFeedback}
                   className="w-full"
                 >
-                  Get AI Feedback
+                  {isGettingFeedback ? 'Getting Feedback...' : '📝 Get AI Feedback'}
                 </Button>
               </CardContent>
             </Card>
@@ -434,7 +365,7 @@ const EssayAssistant = () => {
                     <h2 className="text-xl font-semibold">Essay Ideas</h2>
                     {essayIdeas.map((idea, index) => (
                       <Card key={index}>
-                        <CardContent className="space-y-2">
+                        <CardContent className="space-y-2 p-4">
                           <h3 className="text-lg font-medium">{idea.title}</h3>
                           <p className="text-muted-foreground">{idea.description}</p>
                           <Button onClick={() => handleGenerateOutline(idea.title)}>
@@ -450,7 +381,7 @@ const EssayAssistant = () => {
                   <div className="space-y-4">
                     <h2 className="text-xl font-semibold">Essay Outline</h2>
                     <Card>
-                      <CardContent className="space-y-2">
+                      <CardContent className="space-y-2 p-4">
                         <h3 className="text-lg font-medium">Hook</h3>
                         <p className="text-muted-foreground">{essayOutline.hook.content}</p>
                         <h3 className="text-lg font-medium">Introduction</h3>
@@ -475,7 +406,7 @@ const EssayAssistant = () => {
 
         {/* Feedback Section */}
         {showFeedbackSection && (
-          <section className="mt-8" id="feedback-section">
+          <section className="mt-8">
             <Card>
               <CardHeader>
                 <CardTitle>AI Feedback</CardTitle>
