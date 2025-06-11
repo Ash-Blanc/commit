@@ -14,6 +14,10 @@ export interface Profile {
   sat_score: number | null;
   act_score: number | null;
   intended_major: string | null;
+  budget: number | null;
+  interests: string[] | null;
+  extracurriculars: string[] | null;
+  target_major: string | null;
 }
 
 export const useProfile = () => {

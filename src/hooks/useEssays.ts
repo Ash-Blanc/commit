@@ -62,7 +62,10 @@ export const useEssays = () => {
       const { data, error } = await supabase
         .from('essays')
         .insert({
-          ...essay,
+          title: essay.title || 'Untitled Essay',
+          prompt: essay.prompt,
+          content: essay.content,
+          application_id: essay.application_id,
           word_count: essay.content ? essay.content.split(' ').length : 0
         })
         .select()
@@ -79,13 +82,18 @@ export const useEssays = () => {
 
   const updateEssay = async (id: string, updates: Partial<Essay>): Promise<Essay | null> => {
     try {
+      const updateData: any = {
+        ...updates,
+        updated_at: new Date().toISOString()
+      };
+
+      if (updates.content) {
+        updateData.word_count = updates.content.split(' ').length;
+      }
+
       const { data, error } = await supabase
         .from('essays')
-        .update({
-          ...updates,
-          word_count: updates.content ? updates.content.split(' ').length : undefined,
-          updated_at: new Date().toISOString()
-        })
+        .update(updateData)
         .eq('id', id)
         .select()
         .single();

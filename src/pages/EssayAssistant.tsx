@@ -1,58 +1,145 @@
-
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Editor } from '@tinymce/tinymce-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { Progress } from '@/components/ui/progress';
-import { useAuth } from '@/contexts/AuthContext';
-import { useProfile } from '@/hooks/useProfile';
-import { useEssays, EssayIdea, EssayOutline, EssayFeedback } from '@/hooks/useEssays';
-import Navbar from '@/components/Navbar';
 import { toast } from '@/hooks/use-toast';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { useEssays, Essay, EssayIdea, EssayOutline, EssayFeedback } from '@/hooks/useEssays';
+import { useApplications } from '@/hooks/useApplications';
+import { useProfile } from '@/hooks/useProfile';
+import { useParams, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
+import Navbar from '@/components/Navbar';
+import { Separator } from "@/components/ui/separator"
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
+import { Progress } from "@/components/ui/progress"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
+import { Switch } from "@/components/ui/switch"
+import { Slider } from "@/components/ui/slider"
+import { Checkbox } from "@/components/ui/checkbox"
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
+import { Calendar } from "@/components/ui/calendar"
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+  CommandSeparator,
+} from "@/components/ui/command"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { cn } from "@/lib/utils"
+import { CalendarIcon } from "@radix-ui/react-icons"
+import { format } from "date-fns"
+import { DateRange } from "react-day-picker"
 
 const EssayAssistant = () => {
-  const { user } = useAuth();
-  const { profile } = useProfile();
-  const { essays, createEssay, updateEssay, generateIdeas, generateOutline, getFeedback } = useEssays();
-  
-  const [selectedPrompt, setSelectedPrompt] = useState('');
-  const [essayContent, setEssayContent] = useState('');
-  const [currentEssayId, setCurrentEssayId] = useState<string | null>(null);
-  const [ideas, setIdeas] = useState<EssayIdea[]>([]);
-  const [outline, setOutline] = useState<EssayOutline | null>(null);
-  const [feedback, setFeedback] = useState<EssayFeedback | null>(null);
-  const [isGenerating, setIsGenerating] = useState(false);
+  const { essayId } = useParams<{ essayId: string }>();
+  const navigate = useNavigate();
+  const editorRef = useRef<any>(null);
+  const [content, setContent] = useState('');
+  const [title, setTitle] = useState('');
+  const [prompt, setPrompt] = useState('');
+  const [status, setStatus] = useState('draft');
+  const [wordCount, setWordCount] = useState(0);
+  const [aiFeedback, setAiFeedback] = useState('');
+  const [applicationId, setApplicationId] = useState('');
+  const [isGeneratingIdeas, setIsGeneratingIdeas] = useState(false);
+  const [isGeneratingOutline, setIsGeneratingOutline] = useState(false);
+  const [isGettingFeedback, setIsGettingFeedback] = useState(false);
+  const [essayIdeas, setEssayIdeas] = useState<EssayIdea[]>([]);
+  const [essayOutline, setEssayOutline] = useState<EssayOutline | null>(null);
+  const [essayFeedback, setEssayFeedback] = useState<EssayFeedback | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
+  const [showAISection, setShowAISection] = useState(false);
+  const [showFeedbackSection, setShowFeedbackSection] = useState(false);
+	const [isEditorInitialized, setIsEditorInitialized] = useState(false);
+  const [date, setDate] = React.useState<DateRange | undefined>({
+    from: new Date(),
+    to: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+  })
 
-  const essayPrompts = [
-    "Why do you want to attend this university?",
-    "Describe a challenge you've overcome and what you learned from it.",
-    "Tell us about a time you showed leadership.",
-    "What are your academic and career goals?",
-    "Describe your most meaningful extracurricular activity.",
-    "How will you contribute to our campus community?",
-    "Describe a time when you failed and what you learned from it."
-  ];
+  const {
+    essays,
+    loading,
+    fetchEssays,
+    createEssay,
+    updateEssay,
+    generateIdeas,
+    generateOutline,
+    getFeedback,
+  } = useEssays();
+  const { applications } = useApplications();
+  const { profile } = useProfile();
+
+  useEffect(() => {
+    if (essayId) {
+      const essay = essays.find((essay) => essay.id === essayId);
+      if (essay) {
+        setTitle(essay.title);
+        setPrompt(essay.prompt || '');
+        setContent(essay.content || '');
+        setStatus(essay.status);
+        setWordCount(essay.word_count);
+        setAiFeedback(essay.ai_feedback || '');
+        setApplicationId(essay.application_id || '');
+      }
+    }
+  }, [essayId, essays]);
+
+  useEffect(() => {
+    fetchEssays();
+  }, []);
+
+  const log = () => {
+    if (editorRef.current) {
+      setContent(editorRef.current.getContent());
+      setWordCount(editorRef.current.getContent({ format: 'text' }).split(' ').length);
+    }
+  };
+
+  const handleEditorChange = (content: string, editor: any) => {
+    setContent(content);
+    setWordCount(editor.getContent({ format: 'text' }).split(' ').length);
+  };
 
   const handleGenerateIdeas = async () => {
-    if (!selectedPrompt) {
-      toast({
-        title: "Select a prompt",
-        description: "Please select an essay prompt first.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    setIsGenerating(true);
+    setIsGeneratingIdeas(true);
     try {
-      const generatedIdeas = await generateIdeas(selectedPrompt, profile);
-      setIdeas(generatedIdeas);
-      toast({
-        title: "Ideas Generated!",
-        description: `Generated ${generatedIdeas.length} essay ideas for you.`,
-      });
+      if (!prompt) {
+        toast({
+          title: "Error",
+          description: "Please enter a prompt to generate ideas.",
+          variant: "destructive",
+        });
+        return;
+      }
+      if (!profile) {
+        toast({
+          title: "Error",
+          description: "Please complete your profile to generate ideas.",
+          variant: "destructive",
+        });
+        return;
+      }
+      const ideas = await generateIdeas(prompt, profile);
+      setEssayIdeas(ideas);
+      setShowAISection(true);
     } catch (error) {
       toast({
         title: "Error",
@@ -60,19 +147,32 @@ const EssayAssistant = () => {
         variant: "destructive",
       });
     } finally {
-      setIsGenerating(false);
+      setIsGeneratingIdeas(false);
     }
   };
 
-  const handleGenerateOutline = async (idea: EssayIdea) => {
-    setIsGenerating(true);
+  const handleGenerateOutline = async (topic: string) => {
+    setIsGeneratingOutline(true);
     try {
-      const generatedOutline = await generateOutline(idea.title, selectedPrompt, profile);
-      setOutline(generatedOutline);
-      toast({
-        title: "Outline Generated!",
-        description: "Your essay outline is ready to review.",
-      });
+      if (!prompt) {
+        toast({
+          title: "Error",
+          description: "Please enter a prompt to generate an outline.",
+          variant: "destructive",
+        });
+        return;
+      }
+      if (!profile) {
+        toast({
+          title: "Error",
+          description: "Please complete your profile to generate an outline.",
+          variant: "destructive",
+        });
+        return;
+      }
+      const outline = await generateOutline(topic, prompt, profile);
+      setEssayOutline(outline);
+      setShowAISection(true);
     } catch (error) {
       toast({
         title: "Error",
@@ -80,71 +180,82 @@ const EssayAssistant = () => {
         variant: "destructive",
       });
     } finally {
-      setIsGenerating(false);
+      setIsGeneratingOutline(false);
     }
   };
 
-  const handleAnalyze = async () => {
-    if (!essayContent.trim()) {
-      toast({
-        title: "No content to analyze",
-        description: "Please write some content first.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    setIsGenerating(true);
+  const handleGetFeedback = async () => {
+    setIsGettingFeedback(true);
     try {
-      const essayFeedback = await getFeedback(essayContent);
-      setFeedback(essayFeedback);
-      toast({
-        title: "Analysis Complete!",
-        description: "Your essay has been analyzed. Check the feedback panel.",
-      });
+      if (!content) {
+        toast({
+          title: "Error",
+          description: "Please enter content to get feedback.",
+          variant: "destructive",
+        });
+        return;
+      }
+      const feedback = await getFeedback(content);
+      setEssayFeedback(feedback);
+      setAiFeedback(JSON.stringify(feedback, null, 2));
+      setShowFeedbackSection(true);
     } catch (error) {
       toast({
         title: "Error",
-        description: "Failed to analyze essay. Please try again.",
+        description: "Failed to get feedback. Please try again.",
         variant: "destructive",
       });
     } finally {
-      setIsGenerating(false);
+      setIsGettingFeedback(false);
     }
   };
 
   const handleSaveEssay = async () => {
-    if (!essayContent.trim() || !selectedPrompt) {
-      toast({
-        title: "Cannot save",
-        description: "Please select a prompt and write some content.",
-        variant: "destructive",
-      });
-      return;
-    }
-
+    setIsSaving(true);
     try {
-      if (currentEssayId) {
-        await updateEssay(currentEssayId, {
-          content: essayContent,
-          prompt: selectedPrompt,
+      if (!title) {
+        toast({
+          title: "Error",
+          description: "Please enter a title to save the essay.",
+          variant: "destructive",
+        });
+        return;
+      }
+      if (essayId) {
+        await updateEssay(essayId, {
+          title,
+          prompt,
+          content,
+          status,
+          word_count: wordCount,
+          ai_feedback: aiFeedback,
+          application_id: applicationId,
         });
         toast({
-          title: "Essay Updated",
-          description: "Your essay has been saved successfully.",
+          title: "Success!",
+          description: "Essay updated successfully.",
         });
       } else {
         const newEssay = await createEssay({
-          title: `Essay: ${selectedPrompt.substring(0, 50)}...`,
-          content: essayContent,
-          prompt: selectedPrompt,
-          status: 'draft'
+          title,
+          prompt,
+          content,
+          status,
+          word_count: wordCount,
+          ai_feedback: aiFeedback,
+          application_id: applicationId,
         });
         if (newEssay) {
-          setCurrentEssayId(newEssay.id);
           toast({
-            title: "Essay Saved",
-            description: "Your essay has been created successfully.",
+            title: "Success!",
+            description: "Essay created successfully.",
+          });
+          navigate(`/essay/${newEssay.id}`);
+        } else {
+          toast({
+            title: "Error",
+            description: "Failed to create essay. Please try again.",
+            variant: "destructive",
           });
         }
       }
@@ -154,298 +265,271 @@ const EssayAssistant = () => {
         description: "Failed to save essay. Please try again.",
         variant: "destructive",
       });
+    } finally {
+      setIsSaving(false);
     }
-  };
-
-  const loadEssay = (essay: any) => {
-    setCurrentEssayId(essay.id);
-    setEssayContent(essay.content || '');
-    setSelectedPrompt(essay.prompt || '');
   };
 
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
-      
+
       <main className="container mx-auto px-4 py-8 max-w-7xl">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold mb-2">AI Essay Assistant</h1>
+          <h1 className="text-3xl font-bold mb-2">Essay Assistant</h1>
           <p className="text-muted-foreground">
-            Get personalized writing guidance with AI-powered brainstorming, outlining, and feedback.
+            Craft your perfect college essay with our AI-powered tools.
           </p>
         </div>
 
-        <Tabs defaultValue="write" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4">
-            <TabsTrigger value="write">Write</TabsTrigger>
-            <TabsTrigger value="brainstorm">Brainstorm</TabsTrigger>
-            <TabsTrigger value="outline">Outline</TabsTrigger>
-            <TabsTrigger value="saved">Saved Essays</TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="write" className="space-y-6">
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-              {/* Writing Interface */}
-              <div className="lg:col-span-2 space-y-6">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Choose an Essay Prompt</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="grid gap-2">
-                      {essayPrompts.map((prompt, index) => (
-                        <Button
-                          key={index}
-                          variant={selectedPrompt === prompt ? "default" : "outline"}
-                          className="text-left h-auto p-3 justify-start"
-                          onClick={() => setSelectedPrompt(prompt)}
-                        >
-                          {prompt}
-                        </Button>
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardHeader className="flex flex-row items-center justify-between">
-                    <CardTitle>Write Your Essay</CardTitle>
-                    <div className="flex space-x-2">
-                      <Button variant="outline" size="sm" onClick={handleSaveEssay}>
-                        💾 Save Essay
-                      </Button>
-                      <Button 
-                        onClick={handleAnalyze} 
-                        disabled={!essayContent.trim() || isGenerating}
-                        size="sm"
-                      >
-                        {isGenerating ? 'Analyzing...' : '🔍 Analyze Essay'}
-                      </Button>
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    {selectedPrompt && (
-                      <div className="mb-4 p-3 bg-blue-50 rounded-lg">
-                        <p className="text-sm font-medium text-blue-900">Selected Prompt:</p>
-                        <p className="text-blue-800">{selectedPrompt}</p>
-                      </div>
-                    )}
-                    <Textarea
-                      placeholder="Start writing your essay here... Our AI will provide feedback as you develop your ideas."
-                      value={essayContent}
-                      onChange={(e) => setEssayContent(e.target.value)}
-                      className="min-h-[400px] text-base leading-relaxed"
-                    />
-                    <div className="flex justify-between items-center mt-2 text-sm text-muted-foreground">
-                      <span>Words: {essayContent.split(' ').filter(word => word).length}</span>
-                      <span>Characters: {essayContent.length}</span>
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-
-              {/* Feedback Panel */}
-              <div className="space-y-6">
-                {feedback && (
-                  <>
-                    <Card>
-                      <CardHeader>
-                        <CardTitle>AI Essay Score</CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="text-center mb-4">
-                          <div className="text-4xl font-bold text-primary mb-2">{feedback.overall_score}</div>
-                          <Badge variant="secondary">
-                            {feedback.overall_score >= 85 ? 'Excellent' : 
-                             feedback.overall_score >= 70 ? 'Good' : 
-                             feedback.overall_score >= 55 ? 'Fair' : 'Needs Work'}
-                          </Badge>
-                        </div>
-                        <Progress value={feedback.overall_score} className="mb-4" />
-                      </CardContent>
-                    </Card>
-
-                    <Card>
-                      <CardHeader>
-                        <CardTitle>Strengths</CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="space-y-2">
-                          {feedback.strengths.map((strength, index) => (
-                            <div key={index} className="p-2 bg-green-50 rounded-lg">
-                              <p className="text-sm text-green-900">✓ {strength}</p>
-                            </div>
-                          ))}
-                        </div>
-                      </CardContent>
-                    </Card>
-
-                    <Card>
-                      <CardHeader>
-                        <CardTitle>Suggestions</CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="space-y-2">
-                          {feedback.suggestions.map((suggestion, index) => (
-                            <div key={index} className="p-2 bg-blue-50 rounded-lg">
-                              <p className="text-sm text-blue-900">💡 {suggestion}</p>
-                            </div>
-                          ))}
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </>
-                )}
-
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Profile Integration</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-2 text-sm">
-                      <div className="flex justify-between">
-                        <span>Major:</span>
-                        <span className="font-medium">{profile?.intended_major || 'Not specified'}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>GPA:</span>
-                        <span className="font-medium">{profile?.gpa || 'Not specified'}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>SAT:</span>
-                        <span className="font-medium">{profile?.sat_score || 'Not specified'}</span>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-            </div>
-          </TabsContent>
-
-          <TabsContent value="brainstorm" className="space-y-6">
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+          {/* Essay Editor */}
+          <div className="lg:col-span-3">
             <Card>
               <CardHeader>
-                <CardTitle>AI Essay Ideas Generator</CardTitle>
+                <CardTitle>Essay Editor</CardTitle>
               </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <div>
-                    <label className="text-sm font-medium mb-2 block">Select a prompt to generate ideas</label>
-                    <div className="grid gap-2">
-                      {essayPrompts.slice(0, 3).map((prompt, index) => (
-                        <Button
-                          key={index}
-                          variant={selectedPrompt === prompt ? "default" : "outline"}
-                          className="text-left h-auto p-3 justify-start"
-                          onClick={() => setSelectedPrompt(prompt)}
-                        >
-                          {prompt}
-                        </Button>
-                      ))}
-                    </div>
-                  </div>
-                  
-                  <Button 
-                    onClick={handleGenerateIdeas}
-                    disabled={!selectedPrompt || isGenerating}
-                    className="w-full"
-                  >
-                    {isGenerating ? 'Generating Ideas...' : '💡 Generate Essay Ideas'}
-                  </Button>
+              <CardContent className="space-y-4">
+                <div>
+                  <Label htmlFor="title">Title</Label>
+                  <Input
+                    type="text"
+                    id="title"
+                    placeholder="Essay Title"
+                    value={title}
+                    onChange={(e) => setTitle(e.target.value)}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="prompt">Prompt</Label>
+                  <Textarea
+                    id="prompt"
+                    placeholder="Enter your essay prompt here."
+                    value={prompt}
+                    onChange={(e) => setPrompt(e.target.value)}
+                  />
+                </div>
 
-                  {ideas.length > 0 && (
-                    <div className="space-y-3">
-                      <h3 className="font-medium">Generated Ideas:</h3>
-                      {ideas.map((idea, index) => (
-                        <Card key={index} className="cursor-pointer hover:bg-accent/50" onClick={() => handleGenerateOutline(idea)}>
-                          <CardContent className="p-4">
-                            <h4 className="font-medium mb-2">{idea.title}</h4>
-                            <p className="text-sm text-muted-foreground">{idea.description}</p>
-                          </CardContent>
-                        </Card>
-                      ))}
-                    </div>
-                  )}
+                <div>
+                  <Label>Content</Label>
+                  <Editor
+                    apiKey="YOUR_API_KEY"
+                    onInit={(evt, editor) => {
+                      editorRef.current = editor
+											setIsEditorInitialized(true)
+										}}
+                    value={content}
+                    onEditorChange={handleEditorChange}
+                    init={{
+                      height: 500,
+                      menubar: true,
+                      plugins: [
+                        'advlist autolink lists link image charmap print preview anchor',
+                        'searchreplace visualblocks code fullscreen',
+                        'insertdatetime media table paste code help wordcount'
+                      ],
+                      toolbar: 'undo redo | formatselect | ' +
+                        'bold italic backcolor | alignleft aligncenter ' +
+                        'alignright alignjustify | bullist numlist outdent indent | ' +
+                        'removeformat | help',
+                      content_style: 'body { font-family:Helvetica,Arial,sans-serif; font-size:14px }'
+                    }}
+                  />
+                </div>
+
+                <div className="flex justify-between items-center">
+                  <span>Word Count: {wordCount}</span>
+                  <Button onClick={log}>Log editor content</Button>
                 </div>
               </CardContent>
             </Card>
-          </TabsContent>
+          </div>
 
-          <TabsContent value="outline" className="space-y-6">
-            {outline ? (
-              <Card>
-                <CardHeader>
-                  <CardTitle>Generated Essay Outline</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="p-4 border rounded-lg">
-                    <h3 className="font-medium text-green-700 mb-2">{outline.hook.title}</h3>
-                    <p className="text-sm">{outline.hook.content}</p>
-                  </div>
-                  
-                  <div className="p-4 border rounded-lg">
-                    <h3 className="font-medium text-blue-700 mb-2">{outline.introduction.title}</h3>
-                    <p className="text-sm">{outline.introduction.content}</p>
-                  </div>
-                  
-                  {outline.body_paragraphs.map((paragraph, index) => (
-                    <div key={index} className="p-4 border rounded-lg">
-                      <h3 className="font-medium text-purple-700 mb-2">{paragraph.title}</h3>
-                      <p className="text-sm">{paragraph.content}</p>
-                    </div>
-                  ))}
-                  
-                  <div className="p-4 border rounded-lg">
-                    <h3 className="font-medium text-orange-700 mb-2">{outline.conclusion.title}</h3>
-                    <p className="text-sm">{outline.conclusion.content}</p>
-                  </div>
-                </CardContent>
-              </Card>
-            ) : (
-              <Card>
-                <CardContent className="text-center py-8">
-                  <p className="text-muted-foreground mb-4">Generate ideas first to create an outline</p>
-                  <Button onClick={() => document.querySelector('[value="brainstorm"]')?.click()}>
-                    Go to Brainstorm
-                  </Button>
-                </CardContent>
-              </Card>
-            )}
-          </TabsContent>
-
-          <TabsContent value="saved" className="space-y-6">
+          {/* Essay Settings */}
+          <div className="lg:col-span-1">
             <Card>
               <CardHeader>
-                <CardTitle>Your Saved Essays</CardTitle>
+                <CardTitle>Essay Settings</CardTitle>
               </CardHeader>
-              <CardContent>
-                {essays.length > 0 ? (
-                  <div className="space-y-3">
-                    {essays.map((essay) => (
-                      <Card key={essay.id} className="cursor-pointer hover:bg-accent/50" onClick={() => loadEssay(essay)}>
-                        <CardContent className="p-4">
-                          <div className="flex justify-between items-start">
-                            <div>
-                              <h3 className="font-medium">{essay.title}</h3>
-                              <p className="text-sm text-muted-foreground mt-1">
-                                {essay.word_count} words • {new Date(essay.updated_at).toLocaleDateString()}
-                              </p>
-                            </div>
-                            <Badge variant="outline">{essay.status}</Badge>
-                          </div>
+              <CardContent className="space-y-4">
+                <div>
+                  <Label htmlFor="status">Status</Label>
+                  <Select value={status} onValueChange={setStatus}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="draft">Draft</SelectItem>
+                      <SelectItem value="in_progress">In Progress</SelectItem>
+                      <SelectItem value="completed">Completed</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div>
+                  <Label htmlFor="application">Application</Label>
+                  <Select value={applicationId} onValueChange={setApplicationId}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select application" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {applications.map((app) => (
+                        <SelectItem key={app.id} value={app.id}>
+                          {app.college_name} - {app.application_type}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <Button
+                  className="w-full"
+                  onClick={handleSaveEssay}
+                  disabled={isSaving}
+                >
+                  {isSaving ? 'Saving...' : '💾 Save Essay'}
+                </Button>
+              </CardContent>
+            </Card>
+
+            <Card className="mt-6">
+              <CardHeader>
+                <CardTitle>AI Assistant</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <Button
+                  onClick={handleGenerateIdeas}
+                  disabled={isGeneratingIdeas}
+                  className="w-full"
+                >
+                  {isGeneratingIdeas ? 'Generating Ideas...' : '💡 Generate Ideas'}
+                </Button>
+
+                <Button
+                  onClick={() => {
+                    const element = document.getElementById('feedback-section');
+                    if (element) {
+                      (element as HTMLElement).click();
+                    }
+                  }}
+                  className="w-full"
+                >
+                  Get AI Feedback
+                </Button>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+
+        {/* AI Section */}
+        {showAISection && (
+          <section className="mt-8">
+            <Card id="ai-section">
+              <CardHeader>
+                <CardTitle>AI Generated Content</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                {essayIdeas.length > 0 && (
+                  <div className="space-y-4">
+                    <h2 className="text-xl font-semibold">Essay Ideas</h2>
+                    {essayIdeas.map((idea, index) => (
+                      <Card key={index}>
+                        <CardContent className="space-y-2">
+                          <h3 className="text-lg font-medium">{idea.title}</h3>
+                          <p className="text-muted-foreground">{idea.description}</p>
+                          <Button onClick={() => handleGenerateOutline(idea.title)}>
+                            {isGeneratingOutline ? 'Generating Outline...' : 'Generate Outline'}
+                          </Button>
                         </CardContent>
                       </Card>
                     ))}
                   </div>
-                ) : (
-                  <div className="text-center py-8">
-                    <p className="text-muted-foreground">No saved essays yet</p>
+                )}
+
+                {essayOutline && (
+                  <div className="space-y-4">
+                    <h2 className="text-xl font-semibold">Essay Outline</h2>
+                    <Card>
+                      <CardContent className="space-y-2">
+                        <h3 className="text-lg font-medium">Hook</h3>
+                        <p className="text-muted-foreground">{essayOutline.hook.content}</p>
+                        <h3 className="text-lg font-medium">Introduction</h3>
+                        <p className="text-muted-foreground">{essayOutline.introduction.content}</p>
+                        <h3 className="text-lg font-medium">Body Paragraphs</h3>
+                        {essayOutline.body_paragraphs.map((paragraph, index) => (
+                          <div key={index} className="space-y-1">
+                            <h4 className="text-md font-medium">Paragraph {index + 1}</h4>
+                            <p className="text-muted-foreground">{paragraph.content}</p>
+                          </div>
+                        ))}
+                        <h3 className="text-lg font-medium">Conclusion</h3>
+                        <p className="text-muted-foreground">{essayOutline.conclusion.content}</p>
+                      </CardContent>
+                    </Card>
                   </div>
                 )}
               </CardContent>
             </Card>
-          </TabsContent>
-        </Tabs>
+          </section>
+        )}
+
+        {/* Feedback Section */}
+        {showFeedbackSection && (
+          <section className="mt-8" id="feedback-section">
+            <Card>
+              <CardHeader>
+                <CardTitle>AI Feedback</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                {essayFeedback && (
+                  <div className="space-y-4">
+                    <h2 className="text-xl font-semibold">Feedback Summary</h2>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <h3 className="text-lg font-medium">Overall Score</h3>
+                        <p className="text-muted-foreground">
+                          {essayFeedback.overall_score} / 100
+                        </p>
+                      </div>
+                      <div>
+                        <h3 className="text-lg font-medium">Strengths</h3>
+                        <ul className="list-disc list-inside text-muted-foreground">
+                          {essayFeedback.strengths.map((strength, index) => (
+                            <li key={index}>{strength}</li>
+                          ))}
+                        </ul>
+                      </div>
+                      <div>
+                        <h3 className="text-lg font-medium">Suggestions</h3>
+                        <ul className="list-disc list-inside text-muted-foreground">
+                          {essayFeedback.suggestions.map((suggestion, index) => (
+                            <li key={index}>{suggestion}</li>
+                          ))}
+                        </ul>
+                      </div>
+                      <div>
+                        <h3 className="text-lg font-medium">Grammar Issues</h3>
+                        <ul className="list-disc list-inside text-muted-foreground">
+                          {essayFeedback.grammar_issues.map((issue, index) => (
+                            <li key={index}>{issue}</li>
+                          ))}
+                        </ul>
+                      </div>
+                      <div>
+                        <h3 className="text-lg font-medium">Authenticity Notes</h3>
+                        <ul className="list-disc list-inside text-muted-foreground">
+                          {essayFeedback.authenticity_notes.map((note, index) => (
+                            <li key={index}>{note}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </section>
+        )}
       </main>
     </div>
   );
