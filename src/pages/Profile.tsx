@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -7,6 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
+import { Progress } from '@/components/ui/progress';
 import { useAuth } from '@/contexts/AuthContext';
 import { useProfile } from '@/hooks/useProfile';
 import Navbar from '@/components/Navbar';
@@ -61,9 +61,9 @@ const Profile = () => {
       graduation_year: profileData.graduation_year
     };
 
-    const { error } = await updateProfile(updates);
+    const result = await updateProfile(updates);
     
-    if (error) {
+    if (result?.error) {
       toast({
         title: "Error",
         description: "Failed to update profile",
@@ -114,23 +114,25 @@ const Profile = () => {
     <div className="min-h-screen bg-background">
       <Navbar />
       
-      <main className="container mx-auto px-4 py-8">
-        <div className="mb-8">
+      <main className="container mx-auto px-4 py-8 max-w-7xl">
+        <div className="mb-8 max-w-4xl mx-auto">
           <h1 className="text-3xl font-bold mb-2">Student Profile</h1>
           <p className="text-muted-foreground">
             Keep your profile updated to get better AI recommendations and personalized guidance.
           </p>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 max-w-7xl mx-auto">
           {/* Profile Form */}
           <div className="lg:col-span-2 space-y-6">
-            <Card>
+            <Card className="max-w-4xl">
               <CardHeader className="flex flex-row items-center justify-between">
                 <CardTitle>Personal Information</CardTitle>
                 <Button 
                   variant={isEditing ? "default" : "outline"}
                   onClick={() => isEditing ? handleSave() : setIsEditing(true)}
+                  size="sm"
+                  className="max-w-xs"
                 >
                   {isEditing ? 'Save Changes' : 'Edit Profile'}
                 </Button>
@@ -144,6 +146,7 @@ const Profile = () => {
                       value={profileData.first_name}
                       onChange={(e) => setProfileData(prev => ({ ...prev, first_name: e.target.value }))}
                       disabled={!isEditing}
+                      className="max-w-xs"
                     />
                   </div>
                   <div>
@@ -153,6 +156,7 @@ const Profile = () => {
                       value={profileData.last_name}
                       onChange={(e) => setProfileData(prev => ({ ...prev, last_name: e.target.value }))}
                       disabled={!isEditing}
+                      className="max-w-xs"
                     />
                   </div>
                 </div>
@@ -164,12 +168,13 @@ const Profile = () => {
                     value={profileData.email}
                     onChange={(e) => setProfileData(prev => ({ ...prev, email: e.target.value }))}
                     disabled={!isEditing}
+                    className="max-w-md"
                   />
                 </div>
               </CardContent>
             </Card>
 
-            <Card>
+            <Card className="max-w-4xl">
               <CardHeader>
                 <CardTitle>Academic Information</CardTitle>
               </CardHeader>
@@ -185,6 +190,7 @@ const Profile = () => {
                       value={profileData.gpa}
                       onChange={(e) => setProfileData(prev => ({ ...prev, gpa: parseFloat(e.target.value) || 0 }))}
                       disabled={!isEditing}
+                      className="max-w-xs"
                     />
                   </div>
                   <div>
@@ -195,6 +201,7 @@ const Profile = () => {
                       value={profileData.sat_score}
                       onChange={(e) => setProfileData(prev => ({ ...prev, sat_score: parseInt(e.target.value) || 0 }))}
                       disabled={!isEditing}
+                      className="max-w-xs"
                     />
                   </div>
                   <div>
@@ -205,6 +212,7 @@ const Profile = () => {
                       value={profileData.act_score}
                       onChange={(e) => setProfileData(prev => ({ ...prev, act_score: parseInt(e.target.value) || 0 }))}
                       disabled={!isEditing}
+                      className="max-w-xs"
                     />
                   </div>
                 </div>
@@ -216,7 +224,7 @@ const Profile = () => {
                     onValueChange={(value) => setProfileData(prev => ({ ...prev, intended_major: value }))}
                     disabled={!isEditing}
                   >
-                    <SelectTrigger>
+                    <SelectTrigger className="max-w-md">
                       <SelectValue placeholder="Select your intended major" />
                     </SelectTrigger>
                     <SelectContent>
@@ -239,6 +247,7 @@ const Profile = () => {
                     value={profileData.high_school}
                     onChange={(e) => setProfileData(prev => ({ ...prev, high_school: e.target.value }))}
                     disabled={!isEditing}
+                    className="max-w-md"
                   />
                 </div>
 
@@ -250,6 +259,7 @@ const Profile = () => {
                     value={profileData.graduation_year || ''}
                     onChange={(e) => setProfileData(prev => ({ ...prev, graduation_year: parseInt(e.target.value) || null }))}
                     disabled={!isEditing}
+                    className="max-w-xs"
                   />
                 </div>
               </CardContent>
@@ -336,8 +346,8 @@ const Profile = () => {
             </Card>
           </div>
 
-          {/* Profile Summary */}
-          <div className="space-y-6">
+          {/* Profile Summary Sidebar */}
+          <div className="space-y-6 max-w-sm">
             <Card>
               <CardHeader>
                 <CardTitle>Profile Strength</CardTitle>
@@ -347,18 +357,27 @@ const Profile = () => {
                   <div className="text-3xl font-bold text-primary mb-2">85%</div>
                   <Badge variant="secondary">Strong Candidate</Badge>
                 </div>
-                <div className="space-y-2 text-sm">
-                  <div className="flex justify-between">
-                    <span>Academic Profile:</span>
-                    <span className="font-medium text-green-600">Excellent</span>
+                <div className="space-y-3">
+                  <div>
+                    <div className="flex justify-between text-sm mb-1">
+                      <span>Academic Profile:</span>
+                      <span className="font-medium text-green-600">Excellent</span>
+                    </div>
+                    <Progress value={85} className="h-2" />
                   </div>
-                  <div className="flex justify-between">
-                    <span>Extracurriculars:</span>
-                    <span className="font-medium text-blue-600">Good</span>
+                  <div>
+                    <div className="flex justify-between text-sm mb-1">
+                      <span>Extracurriculars:</span>
+                      <span className="font-medium text-blue-600">Good</span>
+                    </div>
+                    <Progress value={70} className="h-2" />
                   </div>
-                  <div className="flex justify-between">
-                    <span>Profile Completeness:</span>
-                    <span className="font-medium">90%</span>
+                  <div>
+                    <div className="flex justify-between text-sm mb-1">
+                      <span>Profile Completeness:</span>
+                      <span className="font-medium">90%</span>
+                    </div>
+                    <Progress value={90} className="h-2" />
                   </div>
                 </div>
               </CardContent>

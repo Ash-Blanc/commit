@@ -33,7 +33,7 @@ export const useProfile = () => {
     setLoading(true);
     try {
       const { data, error } = await supabase
-        .from('student_profiles')
+        .from('profiles')
         .select('*')
         .eq('id', user.id)
         .single();
@@ -51,7 +51,7 @@ export const useProfile = () => {
   };
 
   const updateProfile = async (updates: Partial<Profile>) => {
-    if (!user) return;
+    if (!user) return { error: 'No user found' };
 
     setLoading(true);
     try {
@@ -65,7 +65,7 @@ export const useProfile = () => {
       };
 
       const { data, error } = await supabase
-        .from('student_profiles')
+        .from('profiles')
         .upsert({
           id: user.id,
           ...profileData,
@@ -76,10 +76,10 @@ export const useProfile = () => {
       if (error) throw error;
 
       setProfile(data);
-      return data;
+      return { data, error: null };
     } catch (error) {
       console.error('Error updating profile:', error);
-      throw error;
+      return { error };
     } finally {
       setLoading(false);
     }
