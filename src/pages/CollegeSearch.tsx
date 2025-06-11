@@ -1,61 +1,66 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { toast } from '@/hooks/use-toast';
+import { Button } from '@/components/ui/button';
 import { useColleges, College } from '@/hooks/useColleges';
 import { useApplications } from '@/hooks/useApplications';
-import { useProfile } from '@/hooks/useProfile';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from "@/components/ui/use-toast"
 import Navbar from '@/components/Navbar';
 
 const CollegeSearch = () => {
-  const [searchTerm, setSearchTerm] = useState('');
-  const [selectedState, setSelectedState] = useState('');
-  const [selectedMajor, setSelectedMajor] = useState('');
-  const [tuitionMax, setTuitionMax] = useState<number | undefined>(undefined);
-  const [acceptanceRateMin, setAcceptanceRateMin] = useState<number | undefined>(undefined);
   const { colleges, loading, searchColleges } = useColleges();
-  const { createApplication } = useApplications();
-  const { profile } = useProfile();
+  const { fetchApplications } = useApplications();
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filters, setFilters] = useState({
+    state: '',
+    major: '',
+    tuitionMax: 100000,
+    acceptanceRateMin: 0,
+  });
 
-  const states = [
-    "Alabama", "Alaska", "Arizona", "Arkansas", "California", "Colorado", "Connecticut", "Delaware", "Florida", "Georgia",
-    "Hawaii", "Idaho", "Illinois", "Indiana", "Iowa", "Kansas", "Kentucky", "Louisiana", "Maine", "Maryland",
-    "Massachusetts", "Michigan", "Minnesota", "Mississippi", "Missouri", "Montana", "Nebraska", "Nevada", "New Hampshire", "New Jersey",
-    "New Mexico", "New York", "North Carolina", "North Dakota", "Ohio", "Oklahoma", "Oregon", "Pennsylvania", "Rhode Island", "South Carolina",
-    "South Dakota", "Tennessee", "Texas", "Utah", "Vermont", "Virginia", "Washington", "West Virginia", "Wisconsin", "Wyoming"
-  ];
-
-  const handleSearch = async () => {
-    await searchColleges({
-      state: selectedState,
-      major: selectedMajor,
-      tuitionMax: tuitionMax,
-      acceptanceRateMin: acceptanceRateMin,
-    });
+  const handleFilterChange = (field: string, value: string | number) => {
+    setFilters(prev => ({
+      ...prev,
+      [field]: value,
+    }));
   };
 
-  const handleCreateApplication = async (collegeId: string) => {
+  const handleSearch = async () => {
+    await searchColleges(filters);
+  };
+
+  const handleAddToApplications = async (college: College) => {
     try {
-      const newApplication = await createApplication({
-        college_id: collegeId,
+      const applicationData = {
+        college_id: college.id,
         application_type: 'regular',
-        status: 'planning',
+        status: 'draft',
         notes: '',
+      };
+
+      const { data, error } = await supabase
+        .from('applications')
+        .insert([applicationData])
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      toast({
+        title: "Success!",
+        description: `Added ${college.name} to your applications.`,
       });
-      
-      if (newApplication) {
-        toast({
-          title: "Application Created",
-          description: "Application has been added to your tracker.",
-        });
-      }
+
+      fetchApplications();
     } catch (error) {
+      console.error('Error adding application:', error);
       toast({
         title: "Error",
-        description: "Failed to create application.",
+        description: "Failed to add college to applications. Please try again.",
         variant: "destructive",
       });
     }
@@ -64,80 +69,73 @@ const CollegeSearch = () => {
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
-      <main className="container mx-auto px-4 py-8 max-w-7xl">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold mb-2">College Search</h1>
-          <p className="text-muted-foreground">
-            Find the perfect college for you. Filter by state, major, tuition, and acceptance rate.
-          </p>
-        </div>
+      <div className="container mx-auto px-4 py-8 max-w-7xl">
+        <Card className="mb-8">
+          <CardHeader>
+            <CardTitle className="text-2xl">Find Your College</CardTitle>
+          </CardHeader>
+          <CardContent className="grid gap-4 md:grid-cols-3">
+            <div>
+              <Label htmlFor="state">State</Label>
+              <Select onValueChange={(value) => handleFilterChange('state', value)}>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Select a state" />
+                </SelectTrigger>
+                <SelectContent>
+                  {/* Add state options here */}
+                  <SelectItem value="CA">California</SelectItem>
+                  <SelectItem value="NY">New York</SelectItem>
+                  <SelectItem value="TX">Texas</SelectItem>
+                  {/* Add more states as needed */}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label htmlFor="major">Major</Label>
+              <Input
+                id="major"
+                type="text"
+                placeholder="e.g., Computer Science"
+                value={filters.major as string}
+                onChange={(e) => handleFilterChange('major', e.target.value)}
+              />
+            </div>
+            <div>
+              <Label htmlFor="tuitionMax">Max Tuition</Label>
+              <Input
+                id="tuitionMax"
+                type="number"
+                placeholder="e.g., 50000"
+                value={filters.tuitionMax as number}
+                onChange={(e) => handleFilterChange('tuitionMax', Number(e.target.value))}
+              />
+            </div>
+            <Button onClick={handleSearch} className="md:col-span-1">Search Colleges</Button>
+          </CardContent>
+        </Card>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-          <Input
-            type="text"
-            placeholder="Search by name"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
-          <Select value={selectedState} onValueChange={setSelectedState}>
-            <SelectTrigger>
-              <SelectValue placeholder="Select State" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="">All States</SelectItem>
-              {states.map((state) => (
-                <SelectItem key={state} value={state}>
-                  {state}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Input
-            type="number"
-            placeholder="Max Tuition"
-            value={tuitionMax === undefined ? '' : tuitionMax.toString()}
-            onChange={(e) => setTuitionMax(e.target.value ? parseInt(e.target.value) : undefined)}
-          />
-          <Input
-            type="number"
-            placeholder="Min Acceptance Rate (%)"
-            value={acceptanceRateMin === undefined ? '' : acceptanceRateMin.toString()}
-            onChange={(e) => setAcceptanceRateMin(e.target.value ? parseInt(e.target.value) : undefined)}
-          />
-        </div>
-
-        <Button onClick={handleSearch} className="mb-8">Search Colleges</Button>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {colleges
-            .filter((college) => college.name.toLowerCase().includes(searchTerm.toLowerCase()))
-            .map((college) => (
+        <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
+          {loading ? (
+            <div className="text-center py-8 md:col-span-2 lg:col-span-3">
+              Loading colleges...
+            </div>
+          ) : (
+            colleges.map((college) => (
               <Card key={college.id}>
                 <CardHeader>
                   <CardTitle>{college.name}</CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-2">
-                  <p className="text-sm text-muted-foreground">
-                    {college.city}, {college.state}
-                  </p>
-                  <div className="text-sm text-muted-foreground space-y-1">
-                    <p>In-State: ${college.tuition_in_state?.toLocaleString()}</p>
-                    <p>Out-of-State: ${college.tuition_out_state?.toLocaleString()}</p>
-                    <p>Acceptance Rate: {(college.acceptance_rate * 100).toFixed(1)}%</p>
-                    {profile?.budget && (
-                      <p className={`font-medium ${college.tuition_out_state > profile.budget ? 'text-red-600' : 'text-green-600'}`}>
-                        {college.tuition_out_state > profile.budget ? 'Above' : 'Within'} Budget
-                      </p>
-                    )}
-                  </div>
-                  <Button onClick={() => handleCreateApplication(college.id)}>
-                    Add to Tracker
-                  </Button>
+                <CardContent>
+                  <p>Location: {college.city}, {college.state}</p>
+                  <p>Tuition (In-State): ${college.tuition_in_state}</p>
+                  <p>Acceptance Rate: {college.acceptance_rate}%</p>
+                  <Button onClick={() => handleAddToApplications(college)}>Add to Applications</Button>
                 </CardContent>
               </Card>
-            ))}
+            ))
+          )}
         </div>
-      </main>
+      </div>
     </div>
   );
 };

@@ -10,8 +10,17 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import {
+  Menubar,
+  MenubarContent,
+  MenubarItem,
+  MenubarMenu,
+  MenubarSeparator,
+  MenubarTrigger,
+} from '@/components/ui/menubar';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { User, LogOut, Settings } from 'lucide-react';
+import { User, LogOut, Settings, Search, Bell, Heart, BookOpen, Target, FileText, GraduationCap } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
 
 const Navbar = () => {
   const location = useLocation();
@@ -27,13 +36,6 @@ const Navbar = () => {
     return email.substring(0, 2).toUpperCase();
   };
 
-  const navItems = [
-    { path: '/dashboard', label: 'Dashboard' },
-    { path: '/college-search', label: 'College Search' },
-    { path: '/applications', label: 'Applications' },
-    { path: '/essay-assistant', label: 'Essay Assistant' },
-  ];
-
   return (
     <nav className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container mx-auto px-4">
@@ -47,67 +49,146 @@ const Navbar = () => {
             </Link>
             
             {user && (
-              <div className="hidden md:flex items-center space-x-6">
-                {navItems.map((item) => (
-                  <Link
-                    key={item.path}
-                    to={item.path}
-                    className={`text-sm font-medium transition-colors hover:text-primary ${
-                      location.pathname === item.path
-                        ? 'text-primary'
-                        : 'text-muted-foreground'
-                    }`}
-                  >
-                    {item.label}
-                  </Link>
-                ))}
-              </div>
+              <Menubar className="border-0 bg-transparent">
+                <MenubarMenu>
+                  <MenubarTrigger className="text-sm font-medium hover:text-primary">
+                    Explore
+                  </MenubarTrigger>
+                  <MenubarContent>
+                    <MenubarItem asChild>
+                      <Link to="/college-search" className="flex items-center">
+                        <Search className="mr-2 h-4 w-4" />
+                        College Search
+                      </Link>
+                    </MenubarItem>
+                    <MenubarItem asChild>
+                      <Link to="/recommendations" className="flex items-center">
+                        <Target className="mr-2 h-4 w-4" />
+                        Recommendations
+                      </Link>
+                    </MenubarItem>
+                    <MenubarSeparator />
+                    <MenubarItem asChild>
+                      <Link to="/applications" className="flex items-center">
+                        <FileText className="mr-2 h-4 w-4" />
+                        My Applications
+                      </Link>
+                    </MenubarItem>
+                  </MenubarContent>
+                </MenubarMenu>
+
+                <MenubarMenu>
+                  <MenubarTrigger className="text-sm font-medium hover:text-primary">
+                    Study Tools
+                  </MenubarTrigger>
+                  <MenubarContent>
+                    <MenubarItem asChild>
+                      <Link to="/essay-assistant" className="flex items-center">
+                        <BookOpen className="mr-2 h-4 w-4" />
+                        Essay Assistant
+                      </Link>
+                    </MenubarItem>
+                    <MenubarItem disabled>
+                      <GraduationCap className="mr-2 h-4 w-4" />
+                      SAT Prep
+                      <Badge variant="secondary" className="ml-2 text-xs">Coming Soon</Badge>
+                    </MenubarItem>
+                    <MenubarItem disabled>
+                      <Target className="mr-2 h-4 w-4" />
+                      Interview Prep
+                      <Badge variant="secondary" className="ml-2 text-xs">Coming Soon</Badge>
+                    </MenubarItem>
+                  </MenubarContent>
+                </MenubarMenu>
+
+                <MenubarMenu>
+                  <MenubarTrigger className="text-sm font-medium hover:text-primary">
+                    Progress
+                  </MenubarTrigger>
+                  <MenubarContent>
+                    <MenubarItem asChild>
+                      <Link to="/dashboard" className="flex items-center">
+                        <Target className="mr-2 h-4 w-4" />
+                        Dashboard
+                      </Link>
+                    </MenubarItem>
+                    <MenubarItem asChild>
+                      <Link to="/applications" className="flex items-center">
+                        <FileText className="mr-2 h-4 w-4" />
+                        Application Status
+                      </Link>
+                    </MenubarItem>
+                    <MenubarSeparator />
+                    <MenubarItem disabled>
+                      <BookOpen className="mr-2 h-4 w-4" />
+                      Learning Path
+                      <Badge variant="secondary" className="ml-2 text-xs">Beta</Badge>
+                    </MenubarItem>
+                  </MenubarContent>
+                </MenubarMenu>
+              </Menubar>
             )}
           </div>
 
           <div className="flex items-center space-x-4">
             {user ? (
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" className="relative h-8 w-8 rounded-full">
-                    <Avatar className="h-8 w-8">
-                      <AvatarFallback>
-                        {getInitials(user.email || 'U')}
-                      </AvatarFallback>
-                    </Avatar>
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent className="w-56" align="end" forceMount>
-                  <DropdownMenuLabel className="font-normal">
-                    <div className="flex flex-col space-y-1">
-                      <p className="text-sm font-medium leading-none">
-                        {user.email}
-                      </p>
-                      <p className="text-xs leading-none text-muted-foreground">
-                        Student
-                      </p>
-                    </div>
-                  </DropdownMenuLabel>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem asChild>
-                    <Link to="/profile" className="flex items-center">
-                      <User className="mr-2 h-4 w-4" />
-                      <span>Profile</span>
-                    </Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
-                    <Link to="/dashboard" className="flex items-center">
-                      <Settings className="mr-2 h-4 w-4" />
-                      <span>Settings</span>
-                    </Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={handleSignOut}>
-                    <LogOut className="mr-2 h-4 w-4" />
-                    <span>Sign out</span>
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
+              <>
+                <Button variant="ghost" size="sm" className="relative">
+                  <Heart className="h-4 w-4" />
+                  <Badge variant="destructive" className="absolute -top-1 -right-1 h-5 w-5 text-xs p-0 flex items-center justify-center">
+                    3
+                  </Badge>
+                </Button>
+                
+                <Button variant="ghost" size="sm" className="relative">
+                  <Bell className="h-4 w-4" />
+                  <Badge variant="destructive" className="absolute -top-1 -right-1 h-5 w-5 text-xs p-0 flex items-center justify-center">
+                    1
+                  </Badge>
+                </Button>
+
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" className="relative h-8 w-8 rounded-full">
+                      <Avatar className="h-8 w-8">
+                        <AvatarFallback>
+                          {getInitials(user.email || 'U')}
+                        </AvatarFallback>
+                      </Avatar>
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent className="w-56" align="end" forceMount>
+                    <DropdownMenuLabel className="font-normal">
+                      <div className="flex flex-col space-y-1">
+                        <p className="text-sm font-medium leading-none">
+                          {user.email}
+                        </p>
+                        <p className="text-xs leading-none text-muted-foreground">
+                          Student
+                        </p>
+                      </div>
+                    </DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem asChild>
+                      <Link to="/profile" className="flex items-center">
+                        <User className="mr-2 h-4 w-4" />
+                        <span>Profile</span>
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <Link to="/dashboard" className="flex items-center">
+                        <Settings className="mr-2 h-4 w-4" />
+                        <span>Settings</span>
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={handleSignOut}>
+                      <LogOut className="mr-2 h-4 w-4" />
+                      <span>Sign out</span>
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </>
             ) : (
               <div className="flex items-center space-x-2">
                 <Button variant="ghost" asChild>

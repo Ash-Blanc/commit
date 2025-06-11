@@ -5,58 +5,44 @@ import { useAuth } from '@/contexts/AuthContext';
 
 export interface Profile {
   id: string;
-  first_name: string | null;
-  last_name: string | null;
-  email: string | null;
-  high_school: string | null;
-  graduation_year: number | null;
-  gpa: number | null;
-  sat_score: number | null;
-  act_score: number | null;
-  intended_major: string | null;
-  budget: number | null;
-  interests: string[] | null;
-  extracurriculars: string[] | null;
-  target_major: string | null;
+  email: string;
+  first_name: string;
+  last_name: string;
+  high_school: string;
+  graduation_year: number;
+  gpa: number;
+  sat_score: number;
+  act_score: number;
+  intended_major: string;
+  budget?: number;
+  interests?: string[];
+  extracurriculars?: string[];
+  target_major?: string;
+  created_at: string;
+  updated_at: string;
 }
 
 export const useProfile = () => {
-  const { user } = useAuth();
   const [profile, setProfile] = useState<Profile | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    if (user) {
-      fetchProfile();
-    } else {
-      setProfile(null);
-      setLoading(false);
-    }
-  }, [user]);
+  const [loading, setLoading] = useState(false);
+  const { user } = useAuth();
 
   const fetchProfile = async () => {
     if (!user) return;
-
+    
+    setLoading(true);
     try {
       const { data, error } = await supabase
-        .from('profiles')
+        .from('student_profiles')
         .select('*')
         .eq('id', user.id)
         .single();
 
-      if (error) {
-        console.error('Error fetching profile:', error);
-      } else {
-        // Ensure all fields have default values
-        const profileWithDefaults = {
-          ...data,
-          budget: data.budget || null,
-          interests: data.interests || [],
-          extracurriculars: data.extracurriculars || [],
-          target_major: data.target_major || null,
-        };
-        setProfile(profileWithDefaults);
+      if (error && error.code !== 'PGRST116') {
+        throw error;
       }
+
+      setProfile(data);
     } catch (error) {
       console.error('Error fetching profile:', error);
     } finally {
@@ -65,29 +51,48 @@ export const useProfile = () => {
   };
 
   const updateProfile = async (updates: Partial<Profile>) => {
-    if (!user) return { error: 'No user logged in' };
+    if (!user) return;
 
+    setLoading(true);
     try {
-      const { error } = await supabase
-        .from('profiles')
-        .update(updates)
-        .eq('id', user.id);
+      const profileData = {
+        ...updates,
+        budget: updates.budget || 50000,
+        interests: updates.interests || [],
+        extracurriculars: updates.extracurriculars || [],
+        target_major: updates.target_major || updates.intended_major || '',
+        updated_at: new Date().toISOString(),
+      };
 
-      if (error) {
-        return { error };
-      }
+      const { data, error } = await supabase
+        .from('student_profiles')
+        .upsert({
+          id: user.id,
+          ...profileData,
+        })
+        .select()
+        .single();
 
-      await fetchProfile();
-      return { error: null };
+      if (error) throw error;
+
+      setProfile(data);
+      return data;
     } catch (error) {
-      return { error };
+      console.error('Error updating profile:', error);
+      throw error;
+    } finally {
+      setLoading(false);
     }
   };
+
+  useEffect(() => {
+    fetchProfile();
+  }, [user]);
 
   return {
     profile,
     loading,
+    fetchProfile,
     updateProfile,
-    refetch: fetchProfile,
   };
 };

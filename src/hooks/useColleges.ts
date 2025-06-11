@@ -38,7 +38,7 @@ export const useColleges = () => {
 
       const collegesWithMajors = data?.map(college => ({
         ...college,
-        city: college.city || college.location?.split(',')[0] || '',
+        city: college.location?.split(',')[0]?.trim() || college.state || 'Unknown',
         majors: college.college_majors?.map((major: any) => major.major_name) || []
       })) || [];
 
@@ -66,13 +66,31 @@ export const useColleges = () => {
 
       const collegesWithMajors = data?.colleges?.map((college: any) => ({
         ...college,
-        city: college.city || college.location?.split(',')[0] || '',
+        city: college.location?.split(',')[0]?.trim() || college.state || 'Unknown',
         majors: college.college_majors?.map((major: any) => major.major_name) || []
       })) || [];
 
       setColleges(collegesWithMajors);
     } catch (error) {
       console.error('Error searching colleges:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const getRecommendations = async (profileData: any) => {
+    setLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('recommendations', {
+        body: { profile: profileData }
+      });
+
+      if (error) throw error;
+
+      return data?.recommendations || [];
+    } catch (error) {
+      console.error('Error getting recommendations:', error);
+      return [];
     } finally {
       setLoading(false);
     }
@@ -87,5 +105,6 @@ export const useColleges = () => {
     loading,
     fetchColleges,
     searchColleges,
+    getRecommendations,
   };
 };

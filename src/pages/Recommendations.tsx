@@ -1,156 +1,152 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { toast } from '@/hooks/use-toast';
-import { useColleges, College } from '@/hooks/useColleges';
-import { useApplications, Application } from '@/hooks/useApplications';
+import { useAuth } from '@/contexts/AuthContext';
 import { useProfile } from '@/hooks/useProfile';
+import { useColleges, College } from '@/hooks/useColleges';
+import { Link } from 'react-router-dom';
+import { toast } from "@/components/ui/use-toast"
+import { supabase } from '@/integrations/supabase/client';
 import Navbar from '@/components/Navbar';
 
 const Recommendations = () => {
-  const { colleges, loading, searchColleges } = useColleges();
-  const { applications, createApplication } = useApplications();
-  const { profile } = useProfile();
-  const [stateFilter, setStateFilter] = useState('');
-  const [majorFilter, setMajorFilter] = useState('');
-  const [tuitionMax, setTuitionMax] = useState<number | undefined>(undefined);
-  const [acceptanceRateMin, setAcceptanceRateMin] = useState<number | undefined>(undefined);
+  const { user } = useAuth();
+  const { profile, loading: profileLoading } = useProfile();
+  const { getRecommendations } = useColleges();
+  const [recommendedColleges, setRecommendedColleges] = useState<College[]>([]);
+  const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    if (profile) {
-      setStateFilter(profile.target_major || '');
-    }
-  }, [profile]);
-
-  const handleSearch = async () => {
-    const filters = {
-      state: stateFilter,
-      major: majorFilter,
-      tuitionMax: tuitionMax,
-      acceptanceRateMin: acceptanceRateMin,
-    };
-    await searchColleges(filters);
-  };
-
-  const handleCreateApplication = async (collegeId: string) => {
+  const handleAddToApplications = async (college: College) => {
     try {
-      const newApplication = await createApplication({
-        college_id: collegeId,
+      const applicationData = {
+        college_id: college.id,
         application_type: 'regular',
-        status: 'planning',
+        status: 'draft',
         notes: '',
+      };
+
+      const { data, error } = await supabase
+        .from('applications')
+        .insert([applicationData])
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      toast({
+        title: "Success!",
+        description: `Added ${college.name} to your applications.`,
       });
-      
-      if (newApplication) {
-        toast({
-          title: "Application Created",
-          description: "Application has been added to your tracker.",
-        });
-      }
     } catch (error) {
+      console.error('Error adding application:', error);
       toast({
         title: "Error",
-        description: "Failed to create application.",
+        description: "Failed to add college to applications. Please try again.",
         variant: "destructive",
       });
     }
   };
 
+  const memoizedGetRecommendations = useCallback(getRecommendations, [getRecommendations]);
+
+  useEffect(() => {
+    const getRecommendations = async () => {
+      if (!profile) return;
+
+      setLoading(true);
+      try {
+        const profileWithDefaults = {
+          ...profile,
+          budget: profile.budget || 50000,
+          interests: profile.interests || [],
+          extracurriculars: profile.extracurriculars || [],
+          target_major: profile.target_major || profile.intended_major || '',
+        };
+
+        const recommendations = await memoizedGetRecommendations(profileWithDefaults);
+        setRecommendedColleges(recommendations);
+      } catch (error) {
+        console.error('Error getting recommendations:', error);
+        toast({
+          title: "Error",
+          description: "Failed to get recommendations. Please try again.",
+          variant: "destructive",
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    getRecommendations();
+  }, [profile, memoizedGetRecommendations]);
+
+  if (profileLoading || loading) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Navbar />
+        <main className="container mx-auto px-4 py-8 max-w-3xl">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary mx-auto"></div>
+            <p className="mt-4 text-muted-foreground">Loading recommendations...</p>
+          </div>
+        </main>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
-      <div className="container mx-auto py-10">
-        <h1 className="text-3xl font-bold mb-4">College Recommendations</h1>
-        <p className="text-muted-foreground mb-8">
-          Find colleges that match your profile and preferences.
-        </p>
+      <main className="container mx-auto px-4 py-8 max-w-3xl">
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold mb-4">Recommended Colleges</h1>
+          <p className="text-muted-foreground">
+            Based on your profile, here are some colleges you might be interested in.
+          </p>
+        </div>
 
-        <Card className="mb-8">
-          <CardHeader>
-            <CardTitle>Search Filters</CardTitle>
-          </CardHeader>
-          <CardContent className="grid gap-4 md:grid-cols-3">
-            <div>
-              <Label htmlFor="state">State</Label>
-              <Input
-                type="text"
-                id="state"
-                placeholder="Enter state"
-                value={stateFilter}
-                onChange={(e) => setStateFilter(e.target.value)}
-              />
-            </div>
-            <div>
-              <Label htmlFor="major">Major</Label>
-              <Input
-                type="text"
-                id="major"
-                placeholder="Enter major"
-                value={majorFilter}
-                onChange={(e) => setMajorFilter(e.target.value)}
-              />
-            </div>
-            <div>
-              <Label htmlFor="tuition">Max Tuition</Label>
-              <Input
-                type="number"
-                id="tuition"
-                placeholder="Enter max tuition"
-                value={tuitionMax || ''}
-                onChange={(e) => setTuitionMax(e.target.value ? parseInt(e.target.value) : undefined)}
-              />
-            </div>
-            <div>
-              <Label htmlFor="acceptanceRate">Min Acceptance Rate</Label>
-              <Input
-                type="number"
-                id="acceptanceRate"
-                placeholder="Enter min acceptance rate"
-                value={acceptanceRateMin || ''}
-                onChange={(e) => setAcceptanceRateMin(e.target.value ? parseInt(e.target.value) : undefined)}
-              />
-            </div>
-            <div className="md:col-span-3">
-              <Button className="w-full" onClick={handleSearch}>
-                Search Colleges
+        <div className="grid grid-cols-1 gap-6">
+          {recommendedColleges.length > 0 ? (
+            recommendedColleges.map((college) => (
+              <Card key={college.id}>
+                <CardHeader>
+                  <CardTitle>{college.name}</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-sm text-muted-foreground">
+                    {college.city}, {college.state}
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    Acceptance Rate: {college.acceptance_rate}%
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    Tuition (In-State): ${college.tuition_in_state}
+                  </p>
+                  <div className="mt-4 flex space-x-2">
+                    <Button asChild variant="outline">
+                      <Link to={college.website_url} target="_blank">
+                        Visit Website
+                      </Link>
+                    </Button>
+                    <Button onClick={() => handleAddToApplications(college)}>
+                      Add to Applications
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            ))
+          ) : (
+            <div className="text-center py-8">
+              <p className="text-muted-foreground mb-4">
+                No recommendations found. Please complete your profile to get personalized recommendations.
+              </p>
+              <Button asChild>
+                <Link to="/profile">Complete Your Profile</Link>
               </Button>
             </div>
-          </CardContent>
-        </Card>
-
-        <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
-          {colleges.map((college) => (
-            <Card key={college.id}>
-              <CardHeader>
-                <CardTitle>{college.name}</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                <p className="text-sm text-muted-foreground">
-                  {college.city}, {college.state}
-                </p>
-                
-                <div className="text-sm text-muted-foreground space-y-1">
-                  <p>In-State: ${college.tuition_in_state?.toLocaleString()}</p>
-                  <p>Out-of-State: ${college.tuition_out_state?.toLocaleString()}</p>
-                  <p>Acceptance Rate: {(college.acceptance_rate * 100).toFixed(1)}%</p>
-                  {profile?.budget && (
-                    <p className={`font-medium ${college.tuition_out_state > profile.budget ? 'text-red-600' : 'text-green-600'}`}>
-                      {college.tuition_out_state > profile.budget ? 'Above' : 'Within'} Budget
-                    </p>
-                  )}
-                </div>
-
-                <Button onClick={() => handleCreateApplication(college.id)}>
-                  Add to Tracker
-                </Button>
-              </CardContent>
-            </Card>
-          ))}
+          )}
         </div>
-      </div>
+      </main>
     </div>
   );
 };
