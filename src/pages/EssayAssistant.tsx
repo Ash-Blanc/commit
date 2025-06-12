@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -10,7 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { toast } from '@/hooks/use-toast';
 import { useEssays } from '@/hooks/useEssays';
-import { useGemini, EssayIdea, EssayFeedback } from '@/hooks/useGemini';
+import { geminiAI } from '@/services/geminiAIService';
 import { useApplications } from '@/hooks/useApplications';
 import { useParams, useNavigate } from 'react-router-dom';
 import Navbar from '@/components/Navbar';
@@ -23,7 +22,9 @@ import {
   Target,
   Clock,
   BookOpen,
-  CheckCircle
+  CheckCircle,
+  Wand2,
+  TrendingUp
 } from 'lucide-react';
 
 const EssayAssistant = () => {
@@ -35,10 +36,12 @@ const EssayAssistant = () => {
   const [status, setStatus] = useState('draft');
   const [wordCount, setWordCount] = useState(0);
   const [applicationId, setApplicationId] = useState('');
-  const [essayIdeas, setEssayIdeas] = useState<EssayIdea[]>([]);
-  const [essayFeedback, setEssayFeedback] = useState<EssayFeedback | null>(null);
+  const [essayIdeas, setEssayIdeas] = useState<string[]>([]);
+  const [essayFeedback, setEssayFeedback] = useState<any | null>(null);
+  const [essayOutline, setEssayOutline] = useState<any | null>(null);
   const [showAISection, setShowAISection] = useState(false);
-  const [activeTab, setActiveTab] = useState<'write' | 'ideas' | 'feedback'>('write');
+  const [activeTab, setActiveTab] = useState<'write' | 'ideas' | 'feedback' | 'outline'>('write');
+  const [aiLoading, setAiLoading] = useState(false);
 
   const {
     essays,
@@ -49,13 +52,6 @@ const EssayAssistant = () => {
   } = useEssays();
   
   const { applications } = useApplications();
-  
-  const {
-    loading: geminiLoading,
-    error: geminiError,
-    generateEssayIdeas,
-    getEssayFeedback
-  } = useGemini();
 
   useEffect(() => {
     if (essayId) {
@@ -90,10 +86,10 @@ const EssayAssistant = () => {
       return;
     }
 
+    setAiLoading(true);
     try {
-      const ideas = await generateEssayIdeas(prompt);
+      const ideas = await geminiAI.generateEssayIdeas(prompt);
       setEssayIdeas(ideas);
-      setShowAISection(true);
       setActiveTab('ideas');
       
       toast({
@@ -106,6 +102,39 @@ const EssayAssistant = () => {
         description: "Failed to generate ideas. Please try again.",
         variant: "destructive",
       });
+    } finally {
+      setAiLoading(false);
+    }
+  };
+
+  const handleGenerateOutline = async () => {
+    if (!title || !prompt) {
+      toast({
+        title: "Error",
+        description: "Please enter both a title and prompt to generate an outline.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setAiLoading(true);
+    try {
+      const outline = await geminiAI.generateEssayOutline(title, prompt);
+      setEssayOutline(outline);
+      setActiveTab('outline');
+      
+      toast({
+        title: "Outline Generated!",
+        description: "AI has created a detailed essay outline for you.",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to generate outline. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setAiLoading(false);
     }
   };
 
@@ -119,8 +148,9 @@ const EssayAssistant = () => {
       return;
     }
 
+    setAiLoading(true);
     try {
-      const feedback = await getEssayFeedback(content);
+      const feedback = await geminiAI.provideDetailedFeedback(content);
       setEssayFeedback(feedback);
       setActiveTab('feedback');
       
@@ -134,6 +164,39 @@ const EssayAssistant = () => {
         description: "Failed to get feedback. Please try again.",
         variant: "destructive",
       });
+    } finally {
+      setAiLoading(false);
+    }
+  };
+
+  const handleImproveContent = async () => {
+    if (!content.trim()) {
+      toast({
+        title: "Error",
+        description: "Please write some content to improve.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setAiLoading(true);
+    try {
+      const improvedContent = await geminiAI.improveEssayContent(content, essayFeedback ? JSON.stringify(essayFeedback) : undefined);
+      setContent(improvedContent);
+      setWordCount(improvedContent.split(' ').filter(word => word.length > 0).length);
+      
+      toast({
+        title: "Content Improved!",
+        description: "AI has enhanced your essay while preserving your voice.",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to improve content. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setAiLoading(false);
     }
   };
 
@@ -211,10 +274,10 @@ const EssayAssistant = () => {
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent mb-3">
-            Essay Assistant
+            AI Essay Assistant
           </h1>
-          <p className="text-xl text-muted-foreground">
-            Craft compelling essays with AI-powered guidance and feedback.
+          <p className="text-xl text-slate-600">
+            Craft compelling essays with advanced AI-powered guidance and feedback.
           </p>
         </div>
 
@@ -222,13 +285,13 @@ const EssayAssistant = () => {
           {/* Main Editor */}
           <div className="xl:col-span-3 space-y-6">
             {/* Essay Tabs */}
-            <div className="flex space-x-2 bg-white/80 p-2 rounded-2xl backdrop-blur-sm border">
+            <div className="flex space-x-2 bg-white/80 p-2 rounded-2xl backdrop-blur-sm border shadow-sm">
               <button
                 onClick={() => setActiveTab('write')}
                 className={`flex-1 flex items-center justify-center py-3 px-4 rounded-xl font-medium transition-all ${
                   activeTab === 'write' 
-                    ? 'bg-primary text-white shadow-lg' 
-                    : 'text-muted-foreground hover:bg-gray-100'
+                    ? 'bg-blue-600 text-white shadow-lg' 
+                    : 'text-slate-600 hover:bg-slate-100'
                 }`}
               >
                 <FileText className="h-4 w-4 mr-2" />
@@ -238,19 +301,30 @@ const EssayAssistant = () => {
                 onClick={() => setActiveTab('ideas')}
                 className={`flex-1 flex items-center justify-center py-3 px-4 rounded-xl font-medium transition-all ${
                   activeTab === 'ideas' 
-                    ? 'bg-primary text-white shadow-lg' 
-                    : 'text-muted-foreground hover:bg-gray-100'
+                    ? 'bg-blue-600 text-white shadow-lg' 
+                    : 'text-slate-600 hover:bg-slate-100'
                 }`}
               >
                 <Lightbulb className="h-4 w-4 mr-2" />
                 Ideas ({essayIdeas.length})
               </button>
               <button
+                onClick={() => setActiveTab('outline')}
+                className={`flex-1 flex items-center justify-center py-3 px-4 rounded-xl font-medium transition-all ${
+                  activeTab === 'outline' 
+                    ? 'bg-blue-600 text-white shadow-lg' 
+                    : 'text-slate-600 hover:bg-slate-100'
+                }`}
+              >
+                <BookOpen className="h-4 w-4 mr-2" />
+                Outline
+              </button>
+              <button
                 onClick={() => setActiveTab('feedback')}
                 className={`flex-1 flex items-center justify-center py-3 px-4 rounded-xl font-medium transition-all ${
                   activeTab === 'feedback' 
-                    ? 'bg-primary text-white shadow-lg' 
-                    : 'text-muted-foreground hover:bg-gray-100'
+                    ? 'bg-blue-600 text-white shadow-lg' 
+                    : 'text-slate-600 hover:bg-slate-100'
                 }`}
               >
                 <MessageSquare className="h-4 w-4 mr-2" />
@@ -260,10 +334,10 @@ const EssayAssistant = () => {
 
             {/* Essay Editor */}
             {activeTab === 'write' && (
-              <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
+              <Card className="border-0 shadow-lg bg-white/90 backdrop-blur-sm">
                 <CardHeader>
                   <CardTitle className="flex items-center text-2xl">
-                    <FileText className="h-6 w-6 mr-2 text-primary" />
+                    <FileText className="h-6 w-6 mr-2 text-blue-600" />
                     Essay Editor
                   </CardTitle>
                 </CardHeader>
@@ -277,13 +351,13 @@ const EssayAssistant = () => {
                         placeholder="Enter essay title..."
                         value={title}
                         onChange={(e) => setTitle(e.target.value)}
-                        className="mt-2 h-12 text-base"
+                        className="mt-2"
                       />
                     </div>
                     <div>
                       <Label htmlFor="status" className="text-base font-medium">Status</Label>
                       <Select value={status} onValueChange={setStatus}>
-                        <SelectTrigger className="mt-2 h-12">
+                        <SelectTrigger className="mt-2">
                           <SelectValue placeholder="Select status" />
                         </SelectTrigger>
                         <SelectContent>
@@ -302,7 +376,7 @@ const EssayAssistant = () => {
                       placeholder="Paste your essay prompt here..."
                       value={prompt}
                       onChange={(e) => setPrompt(e.target.value)}
-                      className="mt-2 min-h-[100px] text-base"
+                      className="mt-2 min-h-[120px]"
                     />
                   </div>
 
@@ -310,12 +384,12 @@ const EssayAssistant = () => {
                     <div className="flex justify-between items-center mb-2">
                       <Label className="text-base font-medium">Essay Content</Label>
                       <div className="flex items-center space-x-4">
-                        <Badge variant="outline" className="px-3 py-1">
+                        <Badge variant="outline" className="px-3 py-1 border-blue-200 text-blue-700">
                           {wordCount} words
                         </Badge>
                         <div className="flex items-center space-x-2">
                           <div className={`w-3 h-3 rounded-full ${getStatusColor(status)}`}></div>
-                          <span className="text-sm text-muted-foreground capitalize">{status}</span>
+                          <span className="text-sm text-slate-600 capitalize">{status.replace('_', ' ')}</span>
                         </div>
                       </div>
                     </div>
@@ -327,17 +401,17 @@ const EssayAssistant = () => {
                     />
                   </div>
 
-                  <div className="flex justify-between items-center pt-4">
+                  <div className="flex justify-between items-center pt-4 border-t border-slate-200">
                     <div className="flex space-x-3">
                       <Button
                         onClick={handleGenerateIdeas}
-                        disabled={geminiLoading || !prompt}
+                        disabled={aiLoading || !prompt}
                         variant="outline"
-                        className="px-6 py-3"
+                        className="px-6 py-3 border-blue-200 text-blue-600 hover:bg-blue-50"
                       >
-                        {geminiLoading ? (
+                        {aiLoading ? (
                           <>
-                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary mr-2"></div>
+                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600 mr-2"></div>
                             Generating...
                           </>
                         ) : (
@@ -348,14 +422,32 @@ const EssayAssistant = () => {
                         )}
                       </Button>
                       <Button
-                        onClick={handleGetFeedback}
-                        disabled={geminiLoading || !content}
+                        onClick={handleGenerateOutline}
+                        disabled={aiLoading || !title || !prompt}
                         variant="outline"
-                        className="px-6 py-3"
+                        className="px-6 py-3 border-purple-200 text-purple-600 hover:bg-purple-50"
                       >
-                        {geminiLoading ? (
+                        {aiLoading ? (
                           <>
-                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary mr-2"></div>
+                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-purple-600 mr-2"></div>
+                            Creating...
+                          </>
+                        ) : (
+                          <>
+                            <BookOpen className="h-4 w-4 mr-2" />
+                            Create Outline
+                          </>
+                        )}
+                      </Button>
+                      <Button
+                        onClick={handleGetFeedback}
+                        disabled={aiLoading || !content}
+                        variant="outline"
+                        className="px-6 py-3 border-green-200 text-green-600 hover:bg-green-50"
+                      >
+                        {aiLoading ? (
+                          <>
+                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-green-600 mr-2"></div>
                             Analyzing...
                           </>
                         ) : (
@@ -366,14 +458,34 @@ const EssayAssistant = () => {
                         )}
                       </Button>
                     </div>
-                    <Button
-                      onClick={handleSaveEssay}
-                      disabled={essayLoading}
-                      className="px-6 py-3"
-                    >
-                      <Save className="h-4 w-4 mr-2" />
-                      {essayLoading ? 'Saving...' : 'Save Essay'}
-                    </Button>
+                    <div className="flex space-x-3">
+                      <Button
+                        onClick={handleImproveContent}
+                        disabled={aiLoading || !content}
+                        variant="outline"
+                        className="px-6 py-3 border-orange-200 text-orange-600 hover:bg-orange-50"
+                      >
+                        {aiLoading ? (
+                          <>
+                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-orange-600 mr-2"></div>
+                            Improving...
+                          </>
+                        ) : (
+                          <>
+                            <Wand2 className="h-4 w-4 mr-2" />
+                            Improve Content
+                          </>
+                        )}
+                      </Button>
+                      <Button
+                        onClick={handleSaveEssay}
+                        disabled={essayLoading}
+                        className="px-6 py-3 bg-blue-600 hover:bg-blue-700"
+                      >
+                        <Save className="h-4 w-4 mr-2" />
+                        {essayLoading ? 'Saving...' : 'Save Essay'}
+                      </Button>
+                    </div>
                   </div>
                 </CardContent>
               </Card>
@@ -381,10 +493,10 @@ const EssayAssistant = () => {
 
             {/* Essay Ideas */}
             {activeTab === 'ideas' && (
-              <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
+              <Card className="border-0 shadow-lg bg-white/90 backdrop-blur-sm">
                 <CardHeader>
                   <CardTitle className="flex items-center text-2xl">
-                    <Lightbulb className="h-6 w-6 mr-2 text-primary" />
+                    <Lightbulb className="h-6 w-6 mr-2 text-blue-600" />
                     AI-Generated Essay Ideas
                   </CardTitle>
                 </CardHeader>
@@ -392,23 +504,19 @@ const EssayAssistant = () => {
                   {essayIdeas.length > 0 ? (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       {essayIdeas.map((idea, index) => (
-                        <Card key={idea.id} className="border border-primary/20 hover:shadow-lg transition-all">
+                        <Card key={index} className="border border-blue-200 hover:shadow-lg transition-all bg-gradient-to-br from-blue-50 to-white">
                           <CardContent className="p-6">
                             <div className="space-y-3">
-                              <h3 className="text-lg font-semibold text-primary">{idea.title}</h3>
-                              <p className="text-muted-foreground">{idea.description}</p>
-                              <div className="flex flex-wrap gap-2">
-                                {idea.tags.map((tag, tagIndex) => (
-                                  <Badge key={tagIndex} variant="secondary" className="text-xs">
-                                    {tag}
-                                  </Badge>
-                                ))}
+                              <div className="flex items-start justify-between">
+                                <h3 className="text-lg font-semibold text-blue-800 leading-tight">Idea {index + 1}</h3>
+                                <Sparkles className="h-5 w-5 text-blue-500" />
                               </div>
+                              <p className="text-slate-700 leading-relaxed">{idea}</p>
                               <Button
                                 size="sm"
-                                className="w-full mt-3"
+                                className="w-full mt-3 bg-blue-600 hover:bg-blue-700"
                                 onClick={() => {
-                                  setTitle(idea.title);
+                                  setTitle(`Essay Idea ${index + 1}`);
                                   setActiveTab('write');
                                 }}
                               >
@@ -421,12 +529,76 @@ const EssayAssistant = () => {
                     </div>
                   ) : (
                     <div className="text-center py-12">
-                      <Lightbulb className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
+                      <Lightbulb className="h-16 w-16 text-slate-400 mx-auto mb-4" />
                       <h3 className="text-xl font-semibold mb-2">No Ideas Generated Yet</h3>
-                      <p className="text-muted-foreground mb-6">
+                      <p className="text-slate-600 mb-6">
                         Enter a prompt and click "Generate Ideas" to get AI-powered essay suggestions.
                       </p>
-                      <Button onClick={() => setActiveTab('write')}>
+                      <Button onClick={() => setActiveTab('write')} className="bg-blue-600 hover:bg-blue-700">
+                        Go to Editor
+                      </Button>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Essay Outline */}
+            {activeTab === 'outline' && (
+              <Card className="border-0 shadow-lg bg-white/90 backdrop-blur-sm">
+                <CardHeader>
+                  <CardTitle className="flex items-center text-2xl">
+                    <BookOpen className="h-6 w-6 mr-2 text-blue-600" />
+                    Essay Outline
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {essayOutline ? (
+                    <div className="space-y-6">
+                      {essayOutline.hook && (
+                        <Card className="border-orange-200 bg-gradient-to-br from-orange-50 to-white">
+                          <CardContent className="p-4">
+                            <h4 className="font-semibold text-orange-800 mb-2">{essayOutline.hook.title}</h4>
+                            <p className="text-orange-700">{essayOutline.hook.content}</p>
+                          </CardContent>
+                        </Card>
+                      )}
+                      
+                      {essayOutline.introduction && (
+                        <Card className="border-blue-200 bg-gradient-to-br from-blue-50 to-white">
+                          <CardContent className="p-4">
+                            <h4 className="font-semibold text-blue-800 mb-2">{essayOutline.introduction.title}</h4>
+                            <p className="text-blue-700">{essayOutline.introduction.content}</p>
+                          </CardContent>
+                        </Card>
+                      )}
+                      
+                      {essayOutline.body_paragraphs && essayOutline.body_paragraphs.map((paragraph: any, index: number) => (
+                        <Card key={index} className="border-purple-200 bg-gradient-to-br from-purple-50 to-white">
+                          <CardContent className="p-4">
+                            <h4 className="font-semibold text-purple-800 mb-2">{paragraph.title}</h4>
+                            <p className="text-purple-700">{paragraph.content}</p>
+                          </CardContent>
+                        </Card>
+                      ))}
+                      
+                      {essayOutline.conclusion && (
+                        <Card className="border-green-200 bg-gradient-to-br from-green-50 to-white">
+                          <CardContent className="p-4">
+                            <h4 className="font-semibold text-green-800 mb-2">{essayOutline.conclusion.title}</h4>
+                            <p className="text-green-700">{essayOutline.conclusion.content}</p>
+                          </CardContent>
+                        </Card>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="text-center py-12">
+                      <BookOpen className="h-16 w-16 text-slate-400 mx-auto mb-4" />
+                      <h3 className="text-xl font-semibold mb-2">No Outline Created Yet</h3>
+                      <p className="text-slate-600 mb-6">
+                        Enter a title and prompt, then click "Create Outline" to get a structured essay plan.
+                      </p>
+                      <Button onClick={() => setActiveTab('write')} className="bg-blue-600 hover:bg-blue-700">
                         Go to Editor
                       </Button>
                     </div>
@@ -437,10 +609,10 @@ const EssayAssistant = () => {
 
             {/* Essay Feedback */}
             {activeTab === 'feedback' && (
-              <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
+              <Card className="border-0 shadow-lg bg-white/90 backdrop-blur-sm">
                 <CardHeader>
                   <CardTitle className="flex items-center text-2xl">
-                    <MessageSquare className="h-6 w-6 mr-2 text-primary" />
+                    <MessageSquare className="h-6 w-6 mr-2 text-blue-600" />
                     AI Feedback & Analysis
                   </CardTitle>
                 </CardHeader>
@@ -448,17 +620,17 @@ const EssayAssistant = () => {
                   {essayFeedback ? (
                     <div className="space-y-6">
                       {/* Overall Score */}
-                      <div className="text-center p-6 bg-gradient-to-r from-blue-50 to-purple-50 rounded-2xl">
-                        <div className="text-4xl font-bold text-primary mb-2">
+                      <div className="text-center p-6 bg-gradient-to-r from-blue-50 to-purple-50 rounded-2xl border border-blue-200">
+                        <div className="text-4xl font-bold text-blue-600 mb-2">
                           {essayFeedback.overall_score}/100
                         </div>
-                        <p className="text-muted-foreground">Overall Essay Score</p>
-                        <Progress value={essayFeedback.overall_score} className="mt-4 max-w-md mx-auto" />
+                        <p className="text-slate-600 mb-4">Overall Essay Score</p>
+                        <Progress value={essayFeedback.overall_score} className="max-w-md mx-auto" />
                       </div>
 
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         {/* Strengths */}
-                        <Card className="border-green-200 bg-green-50/50">
+                        <Card className="border-green-200 bg-gradient-to-br from-green-50 to-white">
                           <CardHeader>
                             <CardTitle className="text-lg text-green-700 flex items-center">
                               <CheckCircle className="h-5 w-5 mr-2" />
@@ -467,7 +639,7 @@ const EssayAssistant = () => {
                           </CardHeader>
                           <CardContent>
                             <ul className="space-y-2">
-                              {essayFeedback.strengths.map((strength, index) => (
+                              {essayFeedback.strengths.map((strength: string, index: number) => (
                                 <li key={index} className="flex items-start space-x-2">
                                   <CheckCircle className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
                                   <span className="text-sm text-green-800">{strength}</span>
@@ -478,7 +650,7 @@ const EssayAssistant = () => {
                         </Card>
 
                         {/* Suggestions */}
-                        <Card className="border-blue-200 bg-blue-50/50">
+                        <Card className="border-blue-200 bg-gradient-to-br from-blue-50 to-white">
                           <CardHeader>
                             <CardTitle className="text-lg text-blue-700 flex items-center">
                               <Target className="h-5 w-5 mr-2" />
@@ -487,7 +659,7 @@ const EssayAssistant = () => {
                           </CardHeader>
                           <CardContent>
                             <ul className="space-y-2">
-                              {essayFeedback.suggestions.map((suggestion, index) => (
+                              {essayFeedback.suggestions.map((suggestion: string, index: number) => (
                                 <li key={index} className="flex items-start space-x-2">
                                   <Target className="h-4 w-4 text-blue-600 mt-0.5 flex-shrink-0" />
                                   <span className="text-sm text-blue-800">{suggestion}</span>
@@ -500,13 +672,13 @@ const EssayAssistant = () => {
 
                       {/* Grammar Issues */}
                       {essayFeedback.grammar_issues.length > 0 && (
-                        <Card className="border-orange-200 bg-orange-50/50">
+                        <Card className="border-orange-200 bg-gradient-to-br from-orange-50 to-white">
                           <CardHeader>
                             <CardTitle className="text-lg text-orange-700">Grammar & Style</CardTitle>
                           </CardHeader>
                           <CardContent>
                             <ul className="space-y-2">
-                              {essayFeedback.grammar_issues.map((issue, index) => (
+                              {essayFeedback.grammar_issues.map((issue: string, index: number) => (
                                 <li key={index} className="text-sm text-orange-800">• {issue}</li>
                               ))}
                             </ul>
@@ -515,13 +687,13 @@ const EssayAssistant = () => {
                       )}
 
                       {/* Authenticity Notes */}
-                      <Card className="border-purple-200 bg-purple-50/50">
+                      <Card className="border-purple-200 bg-gradient-to-br from-purple-50 to-white">
                         <CardHeader>
                           <CardTitle className="text-lg text-purple-700">Authenticity & Voice</CardTitle>
                         </CardHeader>
                         <CardContent>
                           <ul className="space-y-2">
-                            {essayFeedback.authenticity_notes.map((note, index) => (
+                            {essayFeedback.authenticity_notes.map((note: string, index: number) => (
                               <li key={index} className="text-sm text-purple-800">• {note}</li>
                             ))}
                           </ul>
@@ -530,12 +702,12 @@ const EssayAssistant = () => {
                     </div>
                   ) : (
                     <div className="text-center py-12">
-                      <MessageSquare className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
+                      <MessageSquare className="h-16 w-16 text-slate-400 mx-auto mb-4" />
                       <h3 className="text-xl font-semibold mb-2">No Feedback Available</h3>
-                      <p className="text-muted-foreground mb-6">
+                      <p className="text-slate-600 mb-6">
                         Write some content and click "Get AI Feedback" to receive detailed analysis.
                       </p>
-                      <Button onClick={() => setActiveTab('write')}>
+                      <Button onClick={() => setActiveTab('write')} className="bg-blue-600 hover:bg-blue-700">
                         Go to Editor
                       </Button>
                     </div>
@@ -548,7 +720,7 @@ const EssayAssistant = () => {
           {/* Sidebar */}
           <div className="xl:col-span-1 space-y-6">
             {/* Progress Card */}
-            <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
+            <Card className="border-0 shadow-lg bg-white/90 backdrop-blur-sm">
               <CardHeader>
                 <CardTitle className="text-lg">Essay Progress</CardTitle>
               </CardHeader>
@@ -563,15 +735,15 @@ const EssayAssistant = () => {
                 
                 <div className="space-y-3 text-sm">
                   <div className="flex items-center justify-between">
-                    <span className="text-muted-foreground">Word count:</span>
+                    <span className="text-slate-600">Word count:</span>
                     <span className="font-medium">{wordCount}</span>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-muted-foreground">Ideas generated:</span>
+                    <span className="text-slate-600">Ideas generated:</span>
                     <span className="font-medium">{essayIdeas.length}</span>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-muted-foreground">Status:</span>
+                    <span className="text-slate-600">Status:</span>
                     <Badge variant="secondary" className="capitalize text-xs">
                       {status.replace('_', ' ')}
                     </Badge>
@@ -581,33 +753,51 @@ const EssayAssistant = () => {
             </Card>
 
             {/* Quick Actions */}
-            <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
+            <Card className="border-0 shadow-lg bg-white/90 backdrop-blur-sm">
               <CardHeader>
-                <CardTitle className="text-lg">Quick Actions</CardTitle>
+                <CardTitle className="text-lg">AI Tools</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
                 <Button
                   onClick={handleGenerateIdeas}
-                  disabled={geminiLoading || !prompt}
+                  disabled={aiLoading || !prompt}
                   variant="outline"
-                  className="w-full justify-start"
+                  className="w-full justify-start border-blue-200 text-blue-600 hover:bg-blue-50"
                 >
                   <Sparkles className="h-4 w-4 mr-2" />
                   Generate Ideas
                 </Button>
                 <Button
-                  onClick={handleGetFeedback}
-                  disabled={geminiLoading || !content}
+                  onClick={handleGenerateOutline}
+                  disabled={aiLoading || !title || !prompt}
                   variant="outline"
-                  className="w-full justify-start"
+                  className="w-full justify-start border-purple-200 text-purple-600 hover:bg-purple-50"
+                >
+                  <BookOpen className="h-4 w-4 mr-2" />
+                  Create Outline
+                </Button>
+                <Button
+                  onClick={handleGetFeedback}
+                  disabled={aiLoading || !content}
+                  variant="outline"
+                  className="w-full justify-start border-green-200 text-green-600 hover:bg-green-50"
                 >
                   <MessageSquare className="h-4 w-4 mr-2" />
                   Get Feedback
                 </Button>
                 <Button
+                  onClick={handleImproveContent}
+                  disabled={aiLoading || !content}
+                  variant="outline"
+                  className="w-full justify-start border-orange-200 text-orange-600 hover:bg-orange-50"
+                >
+                  <TrendingUp className="h-4 w-4 mr-2" />
+                  Improve Content
+                </Button>
+                <Button
                   onClick={handleSaveEssay}
                   disabled={essayLoading}
-                  className="w-full justify-start"
+                  className="w-full justify-start bg-blue-600 hover:bg-blue-700"
                 >
                   <Save className="h-4 w-4 mr-2" />
                   Save Essay
@@ -617,7 +807,7 @@ const EssayAssistant = () => {
 
             {/* Application Link */}
             {applications.length > 0 && (
-              <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
+              <Card className="border-0 shadow-lg bg-white/90 backdrop-blur-sm">
                 <CardHeader>
                   <CardTitle className="text-lg">Link to Application</CardTitle>
                 </CardHeader>
@@ -642,22 +832,22 @@ const EssayAssistant = () => {
             <Card className="border-0 shadow-lg bg-gradient-to-br from-blue-50 to-purple-50">
               <CardHeader>
                 <CardTitle className="text-lg flex items-center">
-                  <BookOpen className="h-5 w-5 mr-2 text-primary" />
+                  <BookOpen className="h-5 w-5 mr-2 text-blue-600" />
                   Writing Tips
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-3 text-sm">
-                <div className="p-3 bg-white/70 rounded-lg">
+                <div className="p-3 bg-white/70 rounded-lg border border-blue-100">
                   <p className="font-medium text-blue-700 mb-1">Show, Don't Tell</p>
-                  <p className="text-muted-foreground">Use specific examples and anecdotes to illustrate your points.</p>
+                  <p className="text-slate-600">Use specific examples and anecdotes to illustrate your points.</p>
                 </div>
-                <div className="p-3 bg-white/70 rounded-lg">
+                <div className="p-3 bg-white/70 rounded-lg border border-green-100">
                   <p className="font-medium text-green-700 mb-1">Be Authentic</p>
-                  <p className="text-muted-foreground">Write in your own voice and share genuine experiences.</p>
+                  <p className="text-slate-600">Write in your own voice and share genuine experiences.</p>
                 </div>
-                <div className="p-3 bg-white/70 rounded-lg">
+                <div className="p-3 bg-white/70 rounded-lg border border-purple-100">
                   <p className="font-medium text-purple-700 mb-1">Start Strong</p>
-                  <p className="text-muted-foreground">Hook the reader with a compelling opening sentence.</p>
+                  <p className="text-slate-600">Hook the reader with a compelling opening sentence.</p>
                 </div>
               </CardContent>
             </Card>
