@@ -25,7 +25,7 @@ const CollegeSearch = () => {
   const [colleges, setColleges] = useState<CollegeResult[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedCountry, setSelectedCountry] = useState<string>('');
+  const [selectedCountry, setSelectedCountry] = useState<string>('all');
   const [showTopColleges, setShowTopColleges] = useState(true);
 
   useEffect(() => {
@@ -70,7 +70,7 @@ const CollegeSearch = () => {
 
       const results = await collegeSearchService.searchColleges(
         searchTerm,
-        selectedCountry ? countryMap[selectedCountry] : undefined
+        selectedCountry !== 'all' ? countryMap[selectedCountry] : undefined
       );
       
       setColleges(results);
@@ -98,7 +98,7 @@ const CollegeSearch = () => {
   };
 
   const handleCountryFilter = async (country: string) => {
-    if (!country) return;
+    if (!country || country === 'all') return;
     
     setLoading(true);
     setShowTopColleges(false);
@@ -177,7 +177,7 @@ const CollegeSearch = () => {
                     <SelectValue placeholder="Select country" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">All Countries</SelectItem>
+                    <SelectItem value="all">All Countries</SelectItem>
                     <SelectItem value="US">🇺🇸 United States</SelectItem>
                     <SelectItem value="UK">🇬🇧 United Kingdom</SelectItem>
                     <SelectItem value="Singapore">🇸🇬 Singapore</SelectItem>
