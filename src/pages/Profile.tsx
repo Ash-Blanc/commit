@@ -11,12 +11,15 @@ import { Progress } from '@/components/ui/progress';
 import { useAuth } from '@/contexts/AuthContext';
 import { useProfile } from '@/hooks/useProfile';
 import Navbar from '@/components/Navbar';
+import PersonalizationForm from '@/components/PersonalizationForm';
 import { toast } from '@/hooks/use-toast';
+import { Settings } from 'lucide-react';
 
 const Profile = () => {
   const { user } = useAuth();
   const { profile, loading, updateProfile } = useProfile();
   const [isEditing, setIsEditing] = useState(false);
+  const [showPersonalization, setShowPersonalization] = useState(false);
   const [profileData, setProfileData] = useState({
     first_name: '',
     last_name: '',
@@ -117,10 +120,22 @@ const Profile = () => {
       
       <main className="container mx-auto px-4 py-8 max-w-7xl">
         <div className="mb-8 max-w-4xl mx-auto">
-          <h1 className="text-4xl font-bold mb-3">Student Profile</h1>
-          <p className="text-muted-foreground text-lg">
-            Keep your profile updated to get better AI recommendations and personalized guidance.
-          </p>
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-4xl font-bold mb-3">Student Profile</h1>
+              <p className="text-muted-foreground text-lg">
+                Keep your profile updated to get better AI recommendations and personalized guidance.
+              </p>
+            </div>
+            <Button 
+              onClick={() => setShowPersonalization(true)}
+              variant="outline"
+              className="flex items-center gap-2"
+            >
+              <Settings className="h-4 w-4" />
+              Personalization
+            </Button>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 max-w-7xl mx-auto">
@@ -433,6 +448,11 @@ const Profile = () => {
           </div>
         </div>
       </main>
+
+      <PersonalizationForm 
+        isOpen={showPersonalization}
+        onClose={() => setShowPersonalization(false)}
+      />
     </div>
   );
 };
