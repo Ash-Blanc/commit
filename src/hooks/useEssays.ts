@@ -1,6 +1,7 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { aiService, EssayIdea, EssayOutline, EssayFeedback } from '@/services/aiService';
 
 export interface Essay {
   id: string;
@@ -16,25 +17,7 @@ export interface Essay {
   updated_at: string;
 }
 
-export interface EssayIdea {
-  title: string;
-  description: string;
-}
-
-export interface EssayOutline {
-  hook: { title: string; content: string };
-  introduction: { title: string; content: string };
-  body_paragraphs: { title: string; content: string }[];
-  conclusion: { title: string; content: string };
-}
-
-export interface EssayFeedback {
-  overall_score: number;
-  strengths: string[];
-  suggestions: string[];
-  grammar_issues: string[];
-  authenticity_notes: string[];
-}
+export { EssayIdea, EssayOutline, EssayFeedback };
 
 export const useEssays = () => {
   const [essays, setEssays] = useState<Essay[]>([]);
@@ -109,12 +92,7 @@ export const useEssays = () => {
 
   const generateIdeas = async (prompt: string, userProfile: any): Promise<EssayIdea[]> => {
     try {
-      const { data, error } = await supabase.functions.invoke('essay-brainstorm', {
-        body: { prompt, userProfile }
-      });
-
-      if (error) throw error;
-      return data.ideas || [];
+      return await aiService.generateEssayIdeas(prompt, userProfile);
     } catch (error) {
       console.error('Error generating ideas:', error);
       return [];
@@ -123,12 +101,7 @@ export const useEssays = () => {
 
   const generateOutline = async (topic: string, prompt: string, userProfile: any): Promise<EssayOutline | null> => {
     try {
-      const { data, error } = await supabase.functions.invoke('essay-outline', {
-        body: { topic, prompt, userProfile }
-      });
-
-      if (error) throw error;
-      return data.outline;
+      return await aiService.generateEssayOutline(topic, prompt, userProfile);
     } catch (error) {
       console.error('Error generating outline:', error);
       return null;
@@ -137,12 +110,7 @@ export const useEssays = () => {
 
   const getFeedback = async (content: string): Promise<EssayFeedback | null> => {
     try {
-      const { data, error } = await supabase.functions.invoke('essay-feedback', {
-        body: { content }
-      });
-
-      if (error) throw error;
-      return data.feedback;
+      return await aiService.getEssayFeedback(content);
     } catch (error) {
       console.error('Error getting feedback:', error);
       return null;
