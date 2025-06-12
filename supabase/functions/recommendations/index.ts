@@ -18,14 +18,18 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_ANON_KEY') ?? ''
     );
 
+    // Get the authorization header and set up auth
     const authHeader = req.headers.get('Authorization');
-    if (authHeader) {
-      supabase.auth.setAuth(authHeader.replace('Bearer ', ''));
+    if (!authHeader) {
+      throw new Error('No authorization header');
     }
 
-    // Get user profile
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
+    // Use the auth header to get user
+    const { data: { user }, error: authError } = await supabase.auth.getUser(
+      authHeader.replace('Bearer ', '')
+    );
+
+    if (authError || !user) {
       throw new Error('User not authenticated');
     }
 
@@ -95,26 +99,11 @@ serve(async (req) => {
         }
       }
 
-      // Budget consideration
-      if (profile.budget && college.tuition_out_state) {
-        if (college.tuition_out_state <= profile.budget) {
-          score += 15;
-          reasons.push('Within budget range');
-        } else if (college.tuition_out_state <= profile.budget * 1.2) {
-          score += 5;
-          reasons.push('Slightly above budget but manageable');
-        }
-      }
-
-      // Location preference (if interests include location preferences)
-      if (profile.interests && Array.isArray(profile.interests)) {
-        if (profile.interests.includes('urban') && college.city) {
-          const urbanCities = ['Miami', 'Orlando', 'Tampa', 'Jacksonville'];
-          if (urbanCities.includes(college.city)) {
-            score += 10;
-            reasons.push('Located in preferred urban area');
-          }
-        }
+      // Budget consideration (using tuition_in_state as default)
+      const tuition = college.tuition_in_state || college.tuition_out_state;
+      if (tuition && tuition <= 50000) {
+        score += 15;
+        reasons.push('Within reasonable budget range');
       }
 
       return {
@@ -123,7 +112,9 @@ serve(async (req) => {
         match_reasons: reasons,
         majors: college.college_majors?.map((m: any) => m.major_name) || []
       };
-    }).sort((a, b) => b.match_score - a.match_score);
+    }).filter(college => college.match_score > 0)
+      .sort((a, b) => b.match_score - a.match_score)
+      .slice(0, 20);
 
     return new Response(JSON.stringify({ recommendations: recommendations || [] }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },

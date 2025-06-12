@@ -6,65 +6,46 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Input } from '@/components/ui/input';
+import { Upload } from 'lucide-react';
+import { useApplications } from '@/hooks/useApplications';
+import { toast } from "@/components/ui/use-toast";
 import Navbar from '@/components/Navbar';
 
 const Applications = () => {
-  const [applications] = useState([
-    {
-      id: 1,
-      college: 'University of Florida',
-      deadline: '2024-01-15',
-      status: 'Auto-Submitted',
-      progress: 100,
-      requirements: [
-        { name: 'Application Form', completed: true, automated: true },
-        { name: 'Personal Essay', completed: true, automated: false },
-        { name: 'Transcripts', completed: true, automated: true },
-        { name: 'Letters of Recommendation', completed: true, automated: false },
-        { name: 'SAT Scores', completed: true, automated: true }
-      ],
-      timesSaved: 12,
-      submissionDate: '2024-01-10'
-    },
-    {
-      id: 2,
-      college: 'Florida State University',
-      deadline: '2024-01-20',
-      status: 'Ready to Submit',
-      progress: 95,
-      requirements: [
-        { name: 'Application Form', completed: true, automated: true },
-        { name: 'Personal Essay', completed: true, automated: false },
-        { name: 'Transcripts', completed: true, automated: true },
-        { name: 'Letters of Recommendation', completed: false, automated: false },
-        { name: 'SAT Scores', completed: true, automated: true }
-      ],
-      timesSaved: 8,
-      submissionDate: null
-    },
-    {
-      id: 3,
-      college: 'University of Central Florida',
-      deadline: '2024-02-01',
-      status: 'In Progress',
-      progress: 75,
-      requirements: [
-        { name: 'Application Form', completed: true, automated: true },
-        { name: 'Personal Essay', completed: false, automated: false },
-        { name: 'Transcripts', completed: true, automated: true },
-        { name: 'Letters of Recommendation', completed: false, automated: false },
-        { name: 'SAT Scores', completed: true, automated: true }
-      ],
-      timesSaved: 6,
-      submissionDate: null
+  const { applications, loading } = useApplications();
+  const [uploadingDoc, setUploadingDoc] = useState<string | null>(null);
+
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>, docType: string) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    setUploadingDoc(docType);
+    
+    try {
+      // Simulate file upload (replace with actual upload logic)
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
+      toast({
+        title: "Success!",
+        description: `${docType} uploaded successfully.`,
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to upload document. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setUploadingDoc(null);
     }
-  ]);
+  };
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'Auto-Submitted': return 'bg-green-500';
-      case 'Ready to Submit': return 'bg-blue-500';
-      case 'In Progress': return 'bg-yellow-500';
+      case 'submitted': return 'bg-green-500';
+      case 'ready': return 'bg-blue-500';
+      case 'draft': return 'bg-yellow-500';
       default: return 'bg-gray-500';
     }
   };
@@ -77,25 +58,34 @@ const Applications = () => {
     return diffDays;
   };
 
-  const completedRequirements = (requirements: any[]) => {
-    return requirements.filter(req => req.completed).length;
-  };
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <Navbar />
+        <main className="container mx-auto px-4 py-8">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary mx-auto"></div>
+            <p className="mt-4 text-muted-foreground">Loading applications...</p>
+          </div>
+        </main>
+      </div>
+    );
+  }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-gray-50">
       <Navbar />
       
       <main className="container mx-auto px-4 py-8">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold mb-2">Application Management</h1>
-          <p className="text-muted-foreground">
-            Track your college applications, manage requirements, and automate submissions. 
-            Our AI handles form filling and document organization.
+          <h1 className="text-3xl font-bold mb-2 text-gray-900">Application Management</h1>
+          <p className="text-gray-600">
+            Track your college applications, manage requirements, and upload documents.
           </p>
         </div>
 
         <Tabs defaultValue="overview" className="space-y-6">
-          <TabsList>
+          <TabsList className="bg-white">
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="deadlines">Deadlines</TabsTrigger>
             <TabsTrigger value="documents">Documents</TabsTrigger>
@@ -104,38 +94,44 @@ const Applications = () => {
           <TabsContent value="overview" className="space-y-6">
             {/* Summary Stats */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-              <Card>
+              <Card className="bg-white shadow-sm">
                 <CardContent className="p-6">
                   <div className="text-center">
-                    <div className="text-2xl font-bold text-green-600 mb-1">1</div>
-                    <div className="text-sm text-muted-foreground">Auto-Submitted</div>
+                    <div className="text-2xl font-bold text-green-600 mb-1">
+                      {applications.filter(app => app.status === 'submitted').length}
+                    </div>
+                    <div className="text-sm text-gray-600">Submitted</div>
                   </div>
                 </CardContent>
               </Card>
               
-              <Card>
+              <Card className="bg-white shadow-sm">
                 <CardContent className="p-6">
                   <div className="text-center">
-                    <div className="text-2xl font-bold text-blue-600 mb-1">1</div>
-                    <div className="text-sm text-muted-foreground">Ready to Submit</div>
+                    <div className="text-2xl font-bold text-blue-600 mb-1">
+                      {applications.filter(app => app.status === 'ready').length}
+                    </div>
+                    <div className="text-sm text-gray-600">Ready to Submit</div>
                   </div>
                 </CardContent>
               </Card>
               
-              <Card>
+              <Card className="bg-white shadow-sm">
                 <CardContent className="p-6">
                   <div className="text-center">
-                    <div className="text-2xl font-bold text-yellow-600 mb-1">1</div>
-                    <div className="text-sm text-muted-foreground">In Progress</div>
+                    <div className="text-2xl font-bold text-yellow-600 mb-1">
+                      {applications.filter(app => app.status === 'draft').length}
+                    </div>
+                    <div className="text-sm text-gray-600">In Progress</div>
                   </div>
                 </CardContent>
               </Card>
               
-              <Card>
+              <Card className="bg-white shadow-sm">
                 <CardContent className="p-6">
                   <div className="text-center">
-                    <div className="text-2xl font-bold text-primary mb-1">26</div>
-                    <div className="text-sm text-muted-foreground">Hours Saved</div>
+                    <div className="text-2xl font-bold text-primary mb-1">{applications.length}</div>
+                    <div className="text-sm text-gray-600">Total Applications</div>
                   </div>
                 </CardContent>
               </Card>
@@ -143,151 +139,135 @@ const Applications = () => {
 
             {/* Applications List */}
             <div className="space-y-6">
-              {applications.map((app) => (
-                <Card key={app.id} className="hover:shadow-lg transition-shadow">
-                  <CardHeader>
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <CardTitle className="text-xl">{app.college}</CardTitle>
-                        <p className="text-muted-foreground">
-                          Deadline: {app.deadline} ({getDaysUntilDeadline(app.deadline)} days)
-                        </p>
-                      </div>
-                      <div className="text-right">
+              {applications.length > 0 ? (
+                applications.map((app) => (
+                  <Card key={app.id} className="bg-white shadow-sm hover:shadow-md transition-shadow">
+                    <CardHeader>
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <CardTitle className="text-xl text-gray-900">
+                            {app.college?.name || 'College Name'}
+                          </CardTitle>
+                          <p className="text-gray-600">
+                            Status: {app.status}
+                          </p>
+                        </div>
                         <Badge className={getStatusColor(app.status)}>
                           {app.status}
                         </Badge>
-                        <p className="text-sm text-green-600 mt-1">{app.timesSaved} hours saved</p>
                       </div>
-                    </div>
-                  </CardHeader>
-                  
-                  <CardContent>
-                    <div className="mb-6">
-                      <div className="flex justify-between items-center mb-2">
-                        <span className="text-sm font-medium">Progress</span>
-                        <span className="text-sm text-muted-foreground">
-                          {completedRequirements(app.requirements)}/{app.requirements.length} completed
-                        </span>
-                      </div>
-                      <Progress value={app.progress} />
-                    </div>
-
-                    <div className="space-y-3 mb-6">
-                      <h4 className="font-medium">Requirements Checklist</h4>
-                      {app.requirements.map((req, index) => (
-                        <div key={index} className="flex items-center space-x-3 p-3 border rounded-lg">
-                          <Checkbox checked={req.completed} disabled />
-                          <div className="flex-1">
-                            <span className={req.completed ? 'line-through text-muted-foreground' : ''}>
-                              {req.name}
-                            </span>
-                            {req.automated && (
-                              <Badge variant="secondary" className="ml-2 text-xs">
-                                Auto-filled
-                              </Badge>
-                            )}
-                          </div>
-                          {!req.completed && (
-                            <Button variant="outline" size="sm">
-                              Complete
-                            </Button>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-
-                    <div className="flex space-x-3">
-                      {app.status === 'Ready to Submit' && (
-                        <Button className="bg-green-600 hover:bg-green-700">
-                          🚀 Auto-Submit Application
-                        </Button>
-                      )}
-                      {app.status === 'In Progress' && (
+                    </CardHeader>
+                    
+                    <CardContent>
+                      <div className="flex space-x-3">
                         <Button variant="outline">
                           📝 Continue Application
                         </Button>
-                      )}
-                      {app.status === 'Auto-Submitted' && (
-                        <Button variant="outline" disabled>
-                          ✅ Submitted on {app.submissionDate}
+                        <Button variant="outline">
+                          👁️ View Details
                         </Button>
-                      )}
-                      <Button variant="outline">
-                        👁️ View Details
-                      </Button>
-                    </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))
+              ) : (
+                <Card className="bg-white shadow-sm">
+                  <CardContent className="p-6 text-center">
+                    <h3 className="text-lg font-semibold mb-2 text-gray-900">No Applications Yet</h3>
+                    <p className="text-gray-600 mb-4">
+                      Start by adding colleges to your application list
+                    </p>
+                    <Button>➕ Add College Application</Button>
                   </CardContent>
                 </Card>
-              ))}
+              )}
             </div>
-
-            <Card>
-              <CardContent className="p-6 text-center">
-                <h3 className="text-lg font-semibold mb-2">Add More Colleges</h3>
-                <p className="text-muted-foreground mb-4">
-                  Expand your options by adding more colleges to your application list
-                </p>
-                <Button>➕ Add College Application</Button>
-              </CardContent>
-            </Card>
           </TabsContent>
 
           <TabsContent value="deadlines">
-            <Card>
+            <Card className="bg-white shadow-sm">
               <CardHeader>
-                <CardTitle>Upcoming Deadlines</CardTitle>
+                <CardTitle className="text-gray-900">Upcoming Deadlines</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {applications
-                    .filter(app => app.status !== 'Auto-Submitted')
-                    .sort((a, b) => new Date(a.deadline).getTime() - new Date(b.deadline).getTime())
-                    .map((app) => (
-                      <div key={app.id} className="flex justify-between items-center p-4 border rounded-lg">
-                        <div>
-                          <h4 className="font-medium">{app.college}</h4>
-                          <p className="text-sm text-muted-foreground">{app.deadline}</p>
-                        </div>
-                        <div className="text-right">
-                          <Badge variant={getDaysUntilDeadline(app.deadline) <= 7 ? "destructive" : "secondary"}>
-                            {getDaysUntilDeadline(app.deadline)} days left
+                  {applications.length > 0 ? (
+                    applications
+                      .filter(app => app.status !== 'submitted')
+                      .map((app) => (
+                        <div key={app.id} className="flex justify-between items-center p-4 border rounded-lg">
+                          <div>
+                            <h4 className="font-medium text-gray-900">{app.college?.name || 'College Name'}</h4>
+                            <p className="text-sm text-gray-600">
+                              {app.college?.application_deadline || 'No deadline set'}
+                            </p>
+                          </div>
+                          <Badge variant="secondary">
+                            View Details
                           </Badge>
                         </div>
-                      </div>
-                    ))}
+                      ))
+                  ) : (
+                    <p className="text-gray-600">No upcoming deadlines</p>
+                  )}
                 </div>
               </CardContent>
             </Card>
           </TabsContent>
 
           <TabsContent value="documents">
-            <Card>
+            <Card className="bg-white shadow-sm">
               <CardHeader>
-                <CardTitle>Document Management</CardTitle>
+                <CardTitle className="text-gray-900">Document Management</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-4">
-                    <h4 className="font-medium">Required Documents</h4>
-                    <div className="space-y-2">
-                      {['Official Transcripts', 'SAT/ACT Scores', 'Letters of Recommendation', 'Personal Essays'].map((doc, index) => (
-                        <div key={index} className="flex justify-between items-center p-3 border rounded">
-                          <span>{doc}</span>
-                          <Badge variant="secondary">Uploaded</Badge>
+                    <h4 className="font-medium text-gray-900">Upload Documents</h4>
+                    <div className="space-y-4">
+                      {[
+                        'Official Transcripts',
+                        'SAT/ACT Scores',
+                        'Letters of Recommendation',
+                        'Personal Essays',
+                        'Resume/CV',
+                        'Portfolio'
+                      ].map((docType) => (
+                        <div key={docType} className="flex items-center justify-between p-4 border rounded-lg">
+                          <span className="font-medium text-gray-900">{docType}</span>
+                          <div className="flex items-center space-x-2">
+                            <Input
+                              type="file"
+                              id={`upload-${docType}`}
+                              className="hidden"
+                              onChange={(e) => handleFileUpload(e, docType)}
+                              accept=".pdf,.doc,.docx,.jpg,.png"
+                            />
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              disabled={uploadingDoc === docType}
+                              onClick={() => document.getElementById(`upload-${docType}`)?.click()}
+                            >
+                              <Upload className="w-4 h-4 mr-2" />
+                              {uploadingDoc === docType ? 'Uploading...' : 'Upload'}
+                            </Button>
+                          </div>
                         </div>
                       ))}
                     </div>
                   </div>
                   
                   <div className="space-y-4">
-                    <h4 className="font-medium">Upload New Documents</h4>
-                    <Button variant="outline" className="w-full">
-                      📎 Upload Documents
-                    </Button>
-                    <p className="text-sm text-muted-foreground">
-                      Supported formats: PDF, DOC, DOCX, JPG, PNG
-                    </p>
+                    <h4 className="font-medium text-gray-900">Uploaded Documents</h4>
+                    <div className="space-y-2">
+                      <p className="text-sm text-gray-600">
+                        Your uploaded documents will appear here
+                      </p>
+                      <p className="text-xs text-gray-500">
+                        Supported formats: PDF, DOC, DOCX, JPG, PNG (Max 10MB)
+                      </p>
+                    </div>
                   </div>
                 </div>
               </CardContent>
