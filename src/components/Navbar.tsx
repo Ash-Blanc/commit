@@ -2,6 +2,7 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
+import { useSavedColleges } from '@/hooks/useSavedColleges';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -19,13 +20,15 @@ import {
   MenubarTrigger,
 } from '@/components/ui/menubar';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { User, LogOut, Settings, Search, Bell, Heart, BookOpen, Target, FileText, GraduationCap } from 'lucide-react';
+import { User, LogOut, Settings, Search, BookOpen, Target, FileText, GraduationCap, Heart } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import NotificationCenter from '@/components/NotificationCenter';
 
 const Navbar = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, signOut } = useAuth();
+  const { savedColleges } = useSavedColleges();
 
   const handleSignOut = async () => {
     await signOut();
@@ -133,19 +136,51 @@ const Navbar = () => {
           <div className="flex items-center space-x-4">
             {user ? (
               <>
-                <Button variant="ghost" size="sm" className="relative">
-                  <Heart className="h-4 w-4" />
-                  <Badge variant="destructive" className="absolute -top-1 -right-1 h-5 w-5 text-xs p-0 flex items-center justify-center">
-                    3
-                  </Badge>
-                </Button>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="sm" className="relative">
+                      <Heart className="h-4 w-4" />
+                      {savedColleges.length > 0 && (
+                        <Badge variant="destructive" className="absolute -top-1 -right-1 h-5 w-5 text-xs p-0 flex items-center justify-center">
+                          {savedColleges.length}
+                        </Badge>
+                      )}
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent className="w-80" align="end">
+                    <DropdownMenuLabel>Saved Colleges ({savedColleges.length})</DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    {savedColleges.length === 0 ? (
+                      <div className="p-4 text-center text-muted-foreground">
+                        No saved colleges yet
+                      </div>
+                    ) : (
+                      <div className="max-h-64 overflow-y-auto">
+                        {savedColleges.map((saved) => (
+                          <DropdownMenuItem key={saved.id} asChild>
+                            <Link 
+                              to={`/college-search`} 
+                              className="flex flex-col items-start p-3 hover:bg-muted"
+                            >
+                              <span className="font-medium">{saved.college?.name}</span>
+                              <span className="text-sm text-muted-foreground">
+                                {saved.college?.location}
+                              </span>
+                            </Link>
+                          </DropdownMenuItem>
+                        ))}
+                      </div>
+                    )}
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem asChild>
+                      <Link to="/college-search" className="w-full text-center">
+                        View All Colleges
+                      </Link>
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
                 
-                <Button variant="ghost" size="sm" className="relative">
-                  <Bell className="h-4 w-4" />
-                  <Badge variant="destructive" className="absolute -top-1 -right-1 h-5 w-5 text-xs p-0 flex items-center justify-center">
-                    1
-                  </Badge>
-                </Button>
+                <NotificationCenter />
 
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>

@@ -7,9 +7,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { collegeSearchService } from '@/services/collegeSearchService';
+import { useSavedColleges } from '@/hooks/useSavedColleges';
+import { useNotifications } from '@/hooks/useNotifications';
 import { toast } from "@/hooks/use-toast"
 import Navbar from '@/components/Navbar';
-import { Search, Globe, MapPin, ExternalLink, GraduationCap } from 'lucide-react';
+import ApplicationManager from '@/components/ApplicationManager';
+import { Search, Globe, MapPin, ExternalLink, GraduationCap, Heart, DollarSign, Users, TrendingUp } from 'lucide-react';
 
 interface CollegeResult {
   id: string;
@@ -19,6 +22,14 @@ interface CollegeResult {
   state: string;
   website: string;
   type: 'university' | 'college';
+  tuition_in_state?: number;
+  tuition_out_state?: number;
+  acceptance_rate?: number;
+  enrollment?: number;
+  ranking?: string;
+  application_deadline?: string;
+  early_deadline?: string;
+  majors?: string[];
 }
 
 const CollegeSearch = () => {
@@ -27,6 +38,9 @@ const CollegeSearch = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCountry, setSelectedCountry] = useState<string>('all');
   const [showTopColleges, setShowTopColleges] = useState(true);
+  
+  const { saveCollege, unsaveCollege, isCollegeSaved } = useSavedColleges();
+  const { sendNotification } = useNotifications();
 
   useEffect(() => {
     loadTopColleges();
@@ -34,10 +48,22 @@ const CollegeSearch = () => {
 
   const loadTopColleges = async () => {
     setLoading(true);
+    setShowTopColleges(true);
     try {
+      console.log('Loading top colleges...');
       const topColleges = await collegeSearchService.getTopColleges();
+      console.log('Loaded colleges:', topColleges);
       setColleges(topColleges);
+      
+      if (topColleges.length === 0) {
+        toast({
+          title: "No Data",
+          description: "No colleges found in database. Please add some colleges first.",
+          variant: "destructive",
+        });
+      }
     } catch (error) {
+      console.error('Error loading top colleges:', error);
       toast({
         title: "Error",
         description: "Failed to load top colleges. Please try again.",
@@ -62,16 +88,9 @@ const CollegeSearch = () => {
     setShowTopColleges(false);
     
     try {
-      const countryMap: Record<string, string> = {
-        'US': 'United States',
-        'UK': 'United Kingdom',
-        'Singapore': 'Singapore'
-      };
-
-      const results = await collegeSearchService.searchColleges(
-        searchTerm,
-        selectedCountry !== 'all' ? countryMap[selectedCountry] : undefined
-      );
+      console.log('Searching for:', searchTerm);
+      const results = await collegeSearchService.searchColleges(searchTerm, selectedCountry);
+      console.log('Search results:', results);
       
       setColleges(results);
       
@@ -87,6 +106,7 @@ const CollegeSearch = () => {
         });
       }
     } catch (error) {
+      console.error('Search error:', error);
       toast({
         title: "Error",
         description: "Failed to search colleges. Please try again.",
@@ -98,7 +118,10 @@ const CollegeSearch = () => {
   };
 
   const handleCountryFilter = async (country: string) => {
-    if (!country || country === 'all') return;
+    if (!country || country === 'all') {
+      loadTopColleges();
+      return;
+    }
     
     setLoading(true);
     setShowTopColleges(false);
@@ -106,7 +129,7 @@ const CollegeSearch = () => {
     
     try {
       const results = await collegeSearchService.getCollegesByCountry(country as 'US' | 'UK' | 'Singapore');
-      setColleges(results.slice(0, 50)); // Limit results
+      setColleges(results.slice(0, 50));
       
       toast({
         title: "Filter Applied",
@@ -121,6 +144,37 @@ const CollegeSearch = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleTestNotification = () => {
+    sendNotification(
+      'College Search Update',
+      `You searched for "${searchTerm || 'top colleges'}" and found ${colleges.length} results. Don't forget to save your favorites!`,
+      'info',
+      true
+    );
+  };
+
+  const handleToggleSave = async (college: CollegeResult) => {
+    if (isCollegeSaved(college.id)) {
+      await unsaveCollege(college.id);
+    } else {
+      await saveCollege(college.id);
+    }
+  };
+
+  const formatTuition = (amount?: number) => {
+    if (!amount) return 'N/A';
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+      minimumFractionDigits: 0,
+    }).format(amount);
+  };
+
+  const formatAcceptanceRate = (rate?: number) => {
+    if (!rate) return 'N/A';
+    return `${Math.round(rate * 100)}%`;
   };
 
   const getCountryFlag = (country: string) => {
@@ -143,7 +197,7 @@ const CollegeSearch = () => {
             College Search
           </h1>
           <p className="text-xl text-slate-600">
-            Discover universities from the US, UK, and Singapore
+            Discover and apply to your dream colleges
           </p>
         </div>
 
@@ -156,7 +210,7 @@ const CollegeSearch = () => {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               <div>
                 <Label htmlFor="search" className="text-base font-medium">Search Colleges</Label>
                 <Input
@@ -198,6 +252,12 @@ const CollegeSearch = () => {
                       Search
                     </>
                   )}
+                </Button>
+              </div>
+
+              <div className="flex items-end">
+                <Button onClick={handleTestNotification} variant="outline" className="w-full">
+                  Test Notification
                 </Button>
               </div>
             </div>
@@ -245,8 +305,8 @@ const CollegeSearch = () => {
         <div className="space-y-4">
           {showTopColleges && (
             <div className="text-center mb-6">
-              <h2 className="text-2xl font-semibold text-slate-700 mb-2">Top Universities Worldwide</h2>
-              <p className="text-slate-500">Explore some of the world's most prestigious institutions</p>
+              <h2 className="text-2xl font-semibold text-slate-700 mb-2">Top Universities</h2>
+              <p className="text-slate-500">Explore some of the most prestigious institutions</p>
             </div>
           )}
 
@@ -273,7 +333,23 @@ const CollegeSearch = () => {
                           <h3 className="text-lg font-semibold text-slate-800 leading-tight">
                             {college.name}
                           </h3>
-                          <span className="text-2xl ml-2">{getCountryFlag(college.country)}</span>
+                          <div className="flex items-center space-x-2 ml-2">
+                            <span className="text-2xl">{getCountryFlag(college.country)}</span>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleToggleSave(college)}
+                              className="p-1 h-8 w-8"
+                            >
+                              <Heart 
+                                className={`h-4 w-4 ${
+                                  isCollegeSaved(college.id) 
+                                    ? 'fill-red-500 text-red-500' 
+                                    : 'text-slate-400 hover:text-red-500'
+                                }`} 
+                              />
+                            </Button>
+                          </div>
                         </div>
                         
                         <div className="flex items-center text-slate-600 mb-2">
@@ -281,31 +357,77 @@ const CollegeSearch = () => {
                           <span className="text-sm">{college.location}</span>
                         </div>
                         
-                        <Badge variant="secondary" className="text-xs">
-                          {college.type === 'university' ? 'University' : 'College'}
-                        </Badge>
+                        <div className="flex flex-wrap gap-1 mb-3">
+                          <Badge variant="secondary" className="text-xs">
+                            {college.type === 'university' ? 'University' : 'College'}
+                          </Badge>
+                          {college.ranking && (
+                            <Badge variant="outline" className="text-xs">
+                              Rank #{college.ranking}
+                            </Badge>
+                          )}
+                        </div>
+
+                        {/* College Stats */}
+                        <div className="grid grid-cols-2 gap-2 text-xs text-slate-600 mb-3">
+                          {college.acceptance_rate && (
+                            <div className="flex items-center">
+                              <TrendingUp className="h-3 w-3 mr-1" />
+                              {formatAcceptanceRate(college.acceptance_rate)} acceptance
+                            </div>
+                          )}
+                          {college.enrollment && (
+                            <div className="flex items-center">
+                              <Users className="h-3 w-3 mr-1" />
+                              {college.enrollment.toLocaleString()} students
+                            </div>
+                          )}
+                          {college.tuition_out_state && (
+                            <div className="flex items-center">
+                              <DollarSign className="h-3 w-3 mr-1" />
+                              {formatTuition(college.tuition_out_state)}
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Majors */}
+                        {college.majors && college.majors.length > 0 && (
+                          <div className="mb-3">
+                            <p className="text-xs font-medium text-slate-700 mb-1">Popular Majors:</p>
+                            <div className="flex flex-wrap gap-1">
+                              {college.majors.slice(0, 3).map((major, index) => (
+                                <Badge key={index} variant="outline" className="text-xs">
+                                  {major}
+                                </Badge>
+                              ))}
+                              {college.majors.length > 3 && (
+                                <Badge variant="outline" className="text-xs">
+                                  +{college.majors.length - 3} more
+                                </Badge>
+                              )}
+                            </div>
+                          </div>
+                        )}
                       </div>
 
-                      <div className="pt-4 border-t border-slate-100">
-                        <div className="flex space-x-2">
-                          {college.website && (
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              className="flex-1 text-blue-600 border-blue-200 hover:bg-blue-50"
-                              onClick={() => window.open(college.website, '_blank')}
-                            >
-                              <ExternalLink className="h-3 w-3 mr-1" />
-                              Visit Website
-                            </Button>
-                          )}
+                      <div className="pt-4 border-t border-slate-100 space-y-2">
+                        <ApplicationManager
+                          collegeId={college.id}
+                          collegeName={college.name}
+                          applicationDeadline={college.application_deadline}
+                        />
+                        
+                        {college.website && (
                           <Button
                             size="sm"
-                            className="flex-1"
+                            variant="outline"
+                            className="w-full text-blue-600 border-blue-200 hover:bg-blue-50"
+                            onClick={() => window.open(college.website, '_blank')}
                           >
-                            Learn More
+                            <ExternalLink className="h-3 w-3 mr-1" />
+                            Visit Website
                           </Button>
-                        </div>
+                        )}
                       </div>
                     </div>
                   </CardContent>

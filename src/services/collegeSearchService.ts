@@ -1,12 +1,5 @@
 
-interface University {
-  name: string;
-  country: string;
-  alpha_two_code: string;
-  web_pages: string[];
-  domains: string[];
-  state_province?: string;
-}
+import { supabase } from '@/integrations/supabase/client';
 
 interface CollegeSearchResult {
   id: string;
@@ -16,90 +9,155 @@ interface CollegeSearchResult {
   state: string;
   website: string;
   type: 'university' | 'college';
+  tuition_in_state?: number;
+  tuition_out_state?: number;
+  acceptance_rate?: number;
+  enrollment?: number;
+  ranking?: string;
+  application_deadline?: string;
+  early_deadline?: string;
+  majors?: string[];
 }
 
 export class CollegeSearchService {
-  private baseUrl = 'http://universities.hipolabs.com';
-  private serpApiKey = '68266d2fd6105d95d3668bf4c4284db3bccea5b9d575b905960d42669e9e67eb';
-
   async searchColleges(query: string, country?: string): Promise<CollegeSearchResult[]> {
     try {
-      let url = `${this.baseUrl}/search?name=${encodeURIComponent(query)}`;
-      if (country) {
-        url += `&country=${encodeURIComponent(country)}`;
+      console.log('Searching for colleges:', query);
+      
+      let searchQuery = supabase
+        .from('colleges')
+        .select(`
+          *,
+          college_majors(major_name)
+        `);
+
+      if (query.trim()) {
+        searchQuery = searchQuery.ilike('name', `%${query}%`);
       }
 
-      const response = await fetch(url);
-      const universities: University[] = await response.json();
+      if (country && country !== 'all') {
+        searchQuery = searchQuery.eq('state', country);
+      }
 
-      // Filter for US, UK, and Singapore universities
-      const targetCountries = ['United States', 'United Kingdom', 'Singapore'];
-      const filteredUniversities = universities.filter(uni => 
-        targetCountries.includes(uni.country)
-      );
+      const { data, error } = await searchQuery.limit(50);
 
-      return filteredUniversities.map((uni, index) => ({
-        id: `${uni.alpha_two_code}-${index}`,
-        name: uni.name,
-        location: uni.state_province || uni.country,
-        country: uni.country,
-        state: uni.state_province || '',
-        website: uni.web_pages[0] || '',
-        type: uni.name.toLowerCase().includes('college') ? 'college' : 'university'
+      if (error) {
+        console.error('Error searching colleges:', error);
+        throw error;
+      }
+
+      console.log('Found colleges:', data?.length || 0);
+
+      return (data || []).map(college => ({
+        id: college.id,
+        name: college.name,
+        location: college.location || `${college.state}`,
+        country: 'United States',
+        state: college.state || '',
+        website: college.website_url || '',
+        type: college.name.toLowerCase().includes('college') ? 'college' : 'university',
+        tuition_in_state: college.tuition_in_state,
+        tuition_out_state: college.tuition_out_state,
+        acceptance_rate: college.acceptance_rate,
+        enrollment: college.enrollment,
+        ranking: college.ranking,
+        application_deadline: college.application_deadline,
+        early_deadline: college.early_deadline,
+        majors: college.college_majors?.map((major: any) => major.major_name) || []
       }));
     } catch (error) {
-      console.error('Error searching colleges:', error);
+      console.error('Error in searchColleges:', error);
       return [];
     }
   }
 
   async getCollegesByCountry(country: 'US' | 'UK' | 'Singapore'): Promise<CollegeSearchResult[]> {
-    const countryNames = {
-      'US': 'United States',
-      'UK': 'United Kingdom',
-      'Singapore': 'Singapore'
+    const stateMap = {
+      'US': ['California', 'New York', 'Texas', 'Florida', 'Massachusetts'],
+      'UK': ['England', 'Scotland', 'Wales'],
+      'Singapore': ['Singapore']
     };
 
-    return this.searchColleges('', countryNames[country]);
+    try {
+      let query = supabase
+        .from('colleges')
+        .select(`
+          *,
+          college_majors(major_name)
+        `);
+
+      if (country === 'US') {
+        query = query.in('state', stateMap.US);
+      }
+
+      const { data, error } = await query.limit(50);
+
+      if (error) throw error;
+
+      return (data || []).map(college => ({
+        id: college.id,
+        name: college.name,
+        location: college.location || college.state || '',
+        country: country === 'US' ? 'United States' : country === 'UK' ? 'United Kingdom' : 'Singapore',
+        state: college.state || '',
+        website: college.website_url || '',
+        type: college.name.toLowerCase().includes('college') ? 'college' : 'university',
+        tuition_in_state: college.tuition_in_state,
+        tuition_out_state: college.tuition_out_state,
+        acceptance_rate: college.acceptance_rate,
+        enrollment: college.enrollment,
+        ranking: college.ranking,
+        application_deadline: college.application_deadline,
+        early_deadline: college.early_deadline,
+        majors: college.college_majors?.map((major: any) => major.major_name) || []
+      }));
+    } catch (error) {
+      console.error('Error fetching colleges by country:', error);
+      return [];
+    }
   }
 
   async getTopColleges(): Promise<CollegeSearchResult[]> {
-    const topCollegeNames = [
-      'Harvard University',
-      'Stanford University',
-      'Massachusetts Institute of Technology',
-      'University of Cambridge',
-      'University of Oxford',
-      'National University of Singapore'
-    ];
-
-    const results: CollegeSearchResult[] = [];
-    
-    for (const collegeName of topCollegeNames) {
-      const colleges = await this.searchColleges(collegeName);
-      if (colleges.length > 0) {
-        results.push(colleges[0]);
-      }
-    }
-
-    return results;
-  }
-
-  async getCollegeDetails(collegeName: string): Promise<any> {
     try {
-      const serpUrl = `https://serpapi.com/search.json?q=${encodeURIComponent(collegeName + ' university admission requirements')}&api_key=${this.serpApiKey}`;
+      console.log('Fetching top colleges...');
       
-      const response = await fetch(serpUrl);
-      const data = await response.json();
-      
-      return {
-        name: collegeName,
-        details: data.organic_results?.slice(0, 3) || [],
-        admissionInfo: data.answer_box || null
-      };
+      const { data, error } = await supabase
+        .from('colleges')
+        .select(`
+          *,
+          college_majors(major_name)
+        `)
+        .not('ranking', 'is', null)
+        .order('ranking', { ascending: true })
+        .limit(20);
+
+      if (error) {
+        console.error('Error fetching top colleges:', error);
+        throw error;
+      }
+
+      console.log('Found top colleges:', data?.length || 0);
+
+      return (data || []).map(college => ({
+        id: college.id,
+        name: college.name,
+        location: college.location || college.state || '',
+        country: 'United States',
+        state: college.state || '',
+        website: college.website_url || '',
+        type: college.name.toLowerCase().includes('college') ? 'college' : 'university',
+        tuition_in_state: college.tuition_in_state,
+        tuition_out_state: college.tuition_out_state,
+        acceptance_rate: college.acceptance_rate,
+        enrollment: college.enrollment,
+        ranking: college.ranking,
+        application_deadline: college.application_deadline,
+        early_deadline: college.early_deadline,
+        majors: college.college_majors?.map((major: any) => major.major_name) || []
+      }));
     } catch (error) {
-      console.error('Error fetching college details:', error);
-      return null;
+      console.error('Error in getTopColleges:', error);
+      return [];
     }
   }
 }

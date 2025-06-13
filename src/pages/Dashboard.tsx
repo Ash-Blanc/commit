@@ -8,7 +8,6 @@ import { Calendar, BookOpen, Target, TrendingUp, Bell, FileText, Users, Award } 
 import { useAuth } from '@/contexts/AuthContext';
 import { useProfile } from '@/hooks/useProfile';
 import { useApplications } from '@/hooks/useApplications';
-import { useNotifications } from '@/hooks/useNotifications';
 import Navbar from '@/components/Navbar';
 import NotificationCenter from '@/components/NotificationCenter';
 import PersonalizationForm from '@/components/PersonalizationForm';
@@ -17,7 +16,6 @@ const Dashboard = () => {
   const { user } = useAuth();
   const { profile } = useProfile();
   const { applications } = useApplications();
-  const { sendNotification } = useNotifications();
   const [showPersonalization, setShowPersonalization] = useState(false);
 
   const completedApplications = applications.filter(app => app.status === 'submitted').length;
@@ -28,15 +26,6 @@ const Dashboard = () => {
     .filter(app => app.college?.application_deadline)
     .sort((a, b) => new Date(a.college?.application_deadline || '').getTime() - new Date(b.college?.application_deadline || '').getTime())
     .slice(0, 3);
-
-  const handleTestNotification = () => {
-    sendNotification(
-      'Welcome to College Assistant!',
-      'Your personalized college application journey starts here. Complete your profile to get better recommendations.',
-      'success',
-      true
-    );
-  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -55,9 +44,6 @@ const Dashboard = () => {
             </div>
             <div className="flex items-center space-x-2">
               <NotificationCenter />
-              <Button onClick={handleTestNotification} variant="outline" size="sm">
-                Test Notification
-              </Button>
             </div>
           </div>
         </div>
@@ -168,7 +154,9 @@ const Dashboard = () => {
                 {applications.length === 0 ? (
                   <div className="text-center py-8">
                     <p className="text-muted-foreground mb-4">No applications yet</p>
-                    <Button>Start Your First Application</Button>
+                    <Button asChild>
+                      <a href="/college-search">Start Your First Application</a>
+                    </Button>
                   </div>
                 ) : (
                   <div className="space-y-4">
@@ -227,17 +215,17 @@ const Dashboard = () => {
                 <CardTitle>Quick Actions</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
-                <Button className="w-full" variant="outline">
-                  📝 Write New Essay
+                <Button className="w-full" variant="outline" asChild>
+                  <a href="/essay-assistant">📝 Write New Essay</a>
                 </Button>
-                <Button className="w-full" variant="outline">
-                  🎯 Get Recommendations
+                <Button className="w-full" variant="outline" asChild>
+                  <a href="/recommendations">🎯 Get Recommendations</a>
                 </Button>
-                <Button className="w-full" variant="outline">
-                  📊 View Analytics
+                <Button className="w-full" variant="outline" asChild>
+                  <a href="/college-search">🔍 Search Colleges</a>
                 </Button>
-                <Button className="w-full" variant="outline">
-                  💡 AI Assistant
+                <Button className="w-full" variant="outline" asChild>
+                  <a href="/applications">📊 View Applications</a>
                 </Button>
               </CardContent>
             </Card>
