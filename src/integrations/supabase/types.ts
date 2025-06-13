@@ -130,6 +130,47 @@ export type Database = {
         }
         Relationships: []
       }
+      documents: {
+        Row: {
+          application_id: string | null
+          file_path: string
+          file_size: number | null
+          id: string
+          name: string
+          type: string
+          uploaded_at: string
+          user_id: string
+        }
+        Insert: {
+          application_id?: string | null
+          file_path: string
+          file_size?: number | null
+          id?: string
+          name: string
+          type: string
+          uploaded_at?: string
+          user_id: string
+        }
+        Update: {
+          application_id?: string | null
+          file_path?: string
+          file_size?: number | null
+          id?: string
+          name?: string
+          type?: string
+          uploaded_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "documents_application_id_fkey"
+            columns: ["application_id"]
+            isOneToOne: false
+            referencedRelation: "applications"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       essays: {
         Row: {
           ai_feedback: string | null
@@ -179,6 +220,72 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      notifications: {
+        Row: {
+          created_at: string
+          id: string
+          message: string
+          read: boolean | null
+          title: string
+          type: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          message: string
+          read?: boolean | null
+          title: string
+          type?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          message?: string
+          read?: boolean | null
+          title?: string
+          type?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      personalization_preferences: {
+        Row: {
+          academic_preferences: Json | null
+          created_at: string
+          financial_preferences: Json | null
+          geographic_preferences: Json | null
+          id: string
+          personal_goals: Json | null
+          social_preferences: Json | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          academic_preferences?: Json | null
+          created_at?: string
+          financial_preferences?: Json | null
+          geographic_preferences?: Json | null
+          id?: string
+          personal_goals?: Json | null
+          social_preferences?: Json | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          academic_preferences?: Json | null
+          created_at?: string
+          financial_preferences?: Json | null
+          geographic_preferences?: Json | null
+          id?: string
+          personal_goals?: Json | null
+          social_preferences?: Json | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       profiles: {
         Row: {
