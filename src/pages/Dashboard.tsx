@@ -42,9 +42,7 @@ const Dashboard = () => {
                 Track your college applications and get AI-powered guidance
               </p>
             </div>
-            <div className="flex items-center space-x-2">
-              <NotificationCenter />
-            </div>
+            
           </div>
         </div>
 
