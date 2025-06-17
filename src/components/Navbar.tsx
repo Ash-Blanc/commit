@@ -1,4 +1,3 @@
-
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
@@ -20,7 +19,7 @@ import {
   MenubarTrigger,
 } from '@/components/ui/menubar';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { User, LogOut, Settings, Search, BookOpen, Target, FileText, GraduationCap, Heart } from 'lucide-react';
+import { User, LogOut, Settings, Search, BookOpen, Target, FileText, GraduationCap, Heart, BarChart3 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import NotificationCenter from '@/components/NotificationCenter';
 
@@ -106,9 +105,15 @@ const Navbar = () => {
 
                 <MenubarMenu>
                   <MenubarTrigger className="text-sm font-medium hover:text-primary">
-                    Progress
+                    Management
                   </MenubarTrigger>
                   <MenubarContent>
+                    <MenubarItem asChild>
+                      <Link to="/application-management" className="flex items-center">
+                        <BarChart3 className="mr-2 h-4 w-4" />
+                        Application System
+                      </Link>
+                    </MenubarItem>
                     <MenubarItem asChild>
                       <Link to="/dashboard" className="flex items-center">
                         <Target className="mr-2 h-4 w-4" />

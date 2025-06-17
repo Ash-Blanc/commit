@@ -1,4 +1,3 @@
-
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Toaster } from '@/components/ui/toaster';
@@ -16,6 +15,7 @@ import EssayAssistant from '@/pages/EssayAssistant';
 import Profile from '@/pages/Profile';
 import Admin from '@/pages/Admin';
 import NotFound from '@/pages/NotFound';
+import ApplicationManagement from '@/pages/ApplicationManagement';
 
 import './App.css';
 
@@ -59,6 +59,14 @@ function App() {
                 element={
                   <ProtectedRoute>
                     <Applications />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="/application-management" 
+                element={
+                  <ProtectedRoute>
+                    <ApplicationManagement />
                   </ProtectedRoute>
                 } 
               />
