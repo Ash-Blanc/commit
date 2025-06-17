@@ -42,7 +42,6 @@ const Dashboard = () => {
                 Track your college applications and get AI-powered guidance
               </p>
             </div>
-            
           </div>
         </div>
 
